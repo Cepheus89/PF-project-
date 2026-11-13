@@ -7,6 +7,243 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
+
+// created GameState enumarator
+enum class GameState {
+    Menu,
+    StartMenu, // Sub-menu after pressing START GAME
+    Tutorial,  // Tutorial screen
+    Playing,
+    Settings
+};
+
+struct Star {
+    sf::Vector2f position;
+    float speed;
+    sf::Color color;
+};
+
+
+// Helper function to create centered text cleanly
+//this creates centered text so we do not have to qrite it again and again
+sf::Text createCenteredText(const sf::Font& font, const std::string& str, unsigned int size, sf::Vector2f pos, sf::Color color) {
+    sf::Text text(font, str, size);
+    text.setFillColor(color);
+    sf::FloatRect bounds = text.getLocalBounds();
+    text.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+    text.setPosition(pos);
+    return text;
+}
+
+// Reusable function to setup any list of menu items centered on screen (800px width center = 400.f)
+//this handles the spacing
+
+std::vector<sf::Text> createMenuItems(const sf::Font& font, const std::vector<std::string>& options, float startY = 280.f, float spacing = 65.f, unsigned int fontSize = 30) {
+    std::vector<sf::Text> items;
+    //Takes a list of items and places them vertically so they look aligned
+    int rowIndex = 0 ;
+
+    for (const auto& textString : options) {
+        sf::Text menuItem(font, textString, fontSize);
+        sf::FloatRect bounds = menuItem.getLocalBounds();
+        menuItem.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+        menuItem.setPosition({400.f, startY + rowIndex * spacing});
+        menuItem.setFillColor(sf::Color(180, 180, 180));
+        items.push_back(menuItem);
+        rowIndex++ ;
+    }
+    return items;
+}
+
+
+// Event polling and hover interaction logic
+void menu_Interaction(sf::RenderWindow& window, sf::View& view, GameState& currentState,
+                      int& hoveredIndex, std::vector<sf::Text>& mainMenuItems,
+                      std::vector<sf::Text>& startMenuItems, std::vector<std::string>& startOptions,
+                      int& difficultyIndex, const std::vector<std::string>& difficulties, const sf::Font& font, bool& changeState,
+                      float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval) {
+    //gets new mouse pixel also works on all types / sizes of the screen
+
+    sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+    sf::Vector2f mousePos = window.mapPixelToCoords(mousePixel);
+
+    // Get active menu items list depending on current state
+    std::vector<sf::Text>* activeMenuItems = nullptr;
+
+    //load the required menu
+    if (currentState == GameState::Menu)
+        activeMenuItems = &mainMenuItems;   // when in main menu load up the main menu items ;
+    else if (currentState == GameState::StartMenu)  //when in sub menu load up the start menu items
+        activeMenuItems = &startMenuItems;
+
+    // checking all events
+    while (const std::optional event = window.pollEvent()) {
+        if (event->is<sf::Event::Closed>()) {
+            window.close();
+        }
+        //keeping screen proportional / scaled ;
+
+        if (event->getIf<sf::Event::Resized>()) {
+            window.setView(view);
+        }
+
+        if (const auto* mouseClick = event->getIf<sf::Event::MouseButtonPressed>()) {
+            if (mouseClick->button == sf::Mouse::Button::Left) {
+                // Main menu work
+                //Changing state when required ;
+                if (currentState == GameState::Menu) {
+                    if (hoveredIndex == 0)
+                        currentState = GameState::StartMenu; // Goes to Start Sub-Menu
+                    else if (hoveredIndex == 1)
+                        currentState = GameState::Settings;
+                    else if (hoveredIndex == 2)
+                        window.close();
+                }
+
+                // For the sub menu
+                else if (currentState == GameState::StartMenu) {
+                    if (hoveredIndex == 0) {
+                        //change difficulty index 0 = easy, 1 = normal, 2 = hard
+                        difficultyIndex = (difficultyIndex + 1) % difficulties.size();
+                        startOptions[0] = "DIFFICULTY: " + difficulties[difficultyIndex];
+                        startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
+                        //changing stats based on difficulty ;
+                        projectileSpeed = 15.0f + 3.0f * (difficultyIndex-1) ;
+                        launchInterval = 0.3 -0.1 *(difficultyIndex -1) ;
+                        waveInterval = 0.8f - 0.1f * (difficultyIndex-1) ;
+                    }
+                    else if (hoveredIndex == 1)
+                        currentState = GameState::Tutorial; //Tutorial page add textures
+                    else if (hoveredIndex == 2) {
+                        currentState = GameState::Playing;  //to main battleField , change state to true so that we switch from menu to action
+                        changeState = true ;
+                    }
+                    else if (hoveredIndex == 3)
+                        currentState = GameState::Menu;     // take back to main menu
+                }
+            }
+        }
+
+        //ESC key press , return to previous stage
+        if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+            if (keyPressed->code == sf::Keyboard::Key::Escape) {
+                if (currentState == GameState::StartMenu || currentState == GameState::Settings) {
+                    currentState = GameState::Menu;
+                }
+                else if (currentState == GameState::Tutorial || currentState == GameState::Playing) {
+                    currentState = GameState::StartMenu;
+                }
+                //close game if escape pressed in the other screen
+                else if (currentState == GameState::Menu){
+                    window.close() ;
+                }
+            }
+        }
+    }
+
+    // When mouse is above text highlight and rescale :
+    if (activeMenuItems != nullptr) {
+        hoveredIndex = -1;
+        int indexCounter = 0 ;
+        for (auto& item : *activeMenuItems) {
+            if (item.getGlobalBounds().contains(mousePos)) {
+                hoveredIndex = indexCounter;
+                item.setFillColor(sf::Color::Yellow);
+                //resize
+                item.setScale({1.15f, 1.15f});
+            } else {
+                item.setFillColor(sf::Color(180, 180, 180));
+                item.setScale({1.0f, 1.0f});
+            }
+            indexCounter++ ;
+        }
+    }
+}
+// Starfield initialization across 800x600 bounds
+void starfieldCreation(std::vector<Star>& myStars) {
+    myStars.clear();
+    //creates random star locations within the s[eed gives them a random velocity
+    //stores the required stuff in vector array
+
+    for (int i = 0; i < 300; i++) {
+        float x = static_cast<float>(std::rand() % 800);
+        float y = static_cast<float>(std::rand() % 600);
+        float speed = (1.0f + static_cast<float>(std::rand() % 30) / 10.0f);
+        std::uint8_t brightness = static_cast<std::uint8_t>(100 + std::rand() % 155);
+        myStars.push_back({{x, y}, speed, sf::Color(brightness, brightness, brightness)});
+    }
+}
+
+// Background star movement reset bound at 600px height
+void starfieldBackground(std::vector<Star>& myStar, sf::VertexArray& starfield) {
+    starfield.clear();
+    //clear the previious vertex array so a new can be loaded
+    //change the position with updating new height and looping star back to front when it reaches end of the screen
+    //checks vector array for the position and also updates it their
+    for (auto& s : myStar) {
+        s.position.y += s.speed;
+        if (s.position.y > 600.f) {
+            s.position.y = 0.f;
+            s.position.x = static_cast<float>(std::rand() % 800);
+        }
+        starfield.append(sf::Vertex{s.position, s.color});
+    }
+}
+
+
+
+
+// Rendering all the stuff for menu
+void rendering(sf::RenderWindow& window, const sf::VertexArray& starfield, GameState currentState,
+               const sf::Text& titleText, const std::vector<sf::Text>& mainMenuItems,
+               const std::vector<sf::Text>& startMenuItems, const sf::Font& font, const std::string& currentDifficulty) {
+
+    window.clear(sf::Color(10, 10, 15));
+
+    //background, draw vertex array
+    window.draw(starfield);
+    if (currentState == GameState::Menu){
+        window.draw(titleText);
+        //print all items in start menu
+        for (const auto& item : mainMenuItems)
+        {
+            window.draw(item);
+        }
+    }
+    else if (currentState == GameState::StartMenu) {
+        sf::Text subTitle = createCenteredText(font,"PRE-GAME SETUP", 40,{400.f, 130.f}, sf::Color::Yellow);
+        window.draw(subTitle);
+        //Prints all items in start menu
+        for (const auto& item : startMenuItems)
+            {
+                window.draw(item);
+            }
+    }
+    //Prints the tutorial examples , (use better graphics by images/ texture)
+    else if (currentState == GameState::Tutorial) {
+        sf::Text title = createCenteredText(font, "HOW TO PLAY", 40, {400.f, 120.f}, sf::Color::Yellow);
+        sf::Text body = createCenteredText(font,"[ WASD / ARROWS ] : Move player\n""Dodge enemy bullets and survive!\n\n""(Press ESC to return)",22, {400.f, 320.f}, sf::Color::White);
+
+        window.draw(title);
+        window.draw(body);
+    }
+
+    //remove this and add a paused state ;
+    else if (currentState == GameState::Playing) {
+        sf::Text playText = createCenteredText(font, "GAMEPLAY SCREEN \n\nDifficulty: " + currentDifficulty + "\n\n(Press ESC for Menu)", 26, {400.f, 300.f}, sf::Color::White);
+        window.draw(playText);
+    }
+    else if (currentState == GameState::Settings) {
+        sf::Text settingsText = createCenteredText(font, " SETTINGS MENU \n\n[ Sound: 100% ]\n[Controls: WASD + MOUSE]\n\n(Press ESC for Menu)", 22, {400.f, 300.f}, sf::Color::White);
+        window.draw(settingsText);
+    }
+    //to display everthing ;
+    window.display();
+}
+
+
+
+
 // Trail node struct for the dangerous path
 struct TrailNode {
     sf::Vector2f position;
@@ -76,7 +313,7 @@ void crescent(std::vector<Projectile>& activeProjectiles, float crescentcentre, 
     int totalBullets = 7;
     float totalSpawnTime = (totalBullets - 1) * spawnInterval;
     for (int i = 0; i < totalBullets; ++i) {
-        float step = 1.0f / (totalBullets - 1); 
+        float step = 1.0f / (totalBullets - 1);
         float horizontalshift = -0.5f+(i*step); //shift for each bullet
         float horizontalspawn = crescentcentre+(horizontalshift*180.0f); //basically the spawn position, change the 180 to a higher number to create a bigger spread and vice versa
         float arcDip = (0.25f-(horizontalshift*horizontalshift))*60.0f; //same logic as above one
@@ -86,7 +323,7 @@ void crescent(std::vector<Projectile>& activeProjectiles, float crescentcentre, 
         proj.isLaunched = false;
         proj.spawnDelay = i * spawnInterval;
 
-        proj.launchTimer = (totalSpawnTime - proj.spawnDelay) + launchInterval + (i * 1.0f); 
+        proj.launchTimer = (totalSpawnTime - proj.spawnDelay) + launchInterval + (i * 1.0f);
         proj.tracksPlayer = true;
         proj.leavesTrail = false;
 
@@ -127,9 +364,9 @@ void pinwheel(std::vector<Projectile>& activeProjectiles, sf::Vector2f centerPos
         Projectile proj;
         proj.position = centerPos;
         proj.velocity = dir * (projectileSpeed * 0.75f);
-        proj.isLaunched = false;        
-        proj.launchTimer = 1.0f;       
-        proj.tracksPlayer = false;     
+        proj.isLaunched = false;
+        proj.launchTimer = 1.0f;
+        proj.tracksPlayer = false;
         proj.leavesTrail = false;
         activeProjectiles.push_back(proj);
     }
@@ -186,7 +423,7 @@ void updateProjectiles(std::vector<Projectile>& activeProjectiles, float t, unsi
                 }
                 p.isLaunched = true;
             }
-        } 
+        }
         else { //projectile is launched
             p.position += p.velocity; //takes your point and adds the velocity onto it every frame which moves it
             // if this projectile leaves a trail, insert the trail every frame
@@ -229,7 +466,7 @@ bool collision(const std::vector<Projectile>& activeProjectiles, sf::Vector2f pl
             }
         }
 
-        for (const auto& hazard : proj.trail) { //same thing over here but for the trail 
+        for (const auto& hazard : proj.trail) { //same thing over here but for the trail
             float distX = playerPos.x - hazard.position.x;
             float distY = playerPos.y - hazard.position.y;
             if (std::sqrt(distX * distX + distY * distY) < 10.0f) {
@@ -243,10 +480,22 @@ bool collision(const std::vector<Projectile>& activeProjectiles, sf::Vector2f pl
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    unsigned int width = 640;
-    unsigned int height = 360;
+    unsigned int width = 800;
+    unsigned int height = 600;
     sf::RenderWindow window(sf::VideoMode({ width, height }), "Bullet Requiem");
     window.setFramerateLimit(30);
+
+    sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(width), static_cast<float>(height)}));
+    window.setView(view);
+
+    //Creating vector arrays to store info about the stars falling in back ground
+    //Then call void function to initilaize the vector
+
+    std::vector<Star> myStars;
+    starfieldCreation(myStars);
+    //vertex array used in background since it is much more efficient
+
+    sf::VertexArray starBackground(sf::PrimitiveType::Points);
 
     // Load Textures & Fonts
     sf::Texture texture;
@@ -260,13 +509,12 @@ int main() {
         return -1;
     }
     sf::Texture texture2;
-    if (!texture2.loadFromFile("Sprites/projectileonetemporary.png")) {
-        std::cerr << "Failed to load Sprites/projectileonetemporary.png\n";
+    //resize this pls
+    if (!texture2.loadFromFile("Sprites/frostattack.png")) {
         return -1;
-    }
+}
     sf::Texture texture3;
     if (!texture3.loadFromFile("Sprites/Bosssprite.png")) {
-        std::cerr << "Failed to load Sprites/Bosssprite.png\n";
         return -1;
     }
     // Speech bubble setup
@@ -280,20 +528,53 @@ int main() {
     speech.setCharacterSize(12);
     speech.setFillColor(sf::Color::Black);
 
+    //further Work on background
+
+    // Title text set up centered at x=400, y=120;
+    sf::Text titletext(font, "BULLET REQUIEM", 55);
+    sf::FloatRect titleBounds = titletext.getLocalBounds();
+    titletext.setFillColor(sf::Color(255, 40, 40));
+    titletext.setStyle(sf::Text::Bold);
+    titletext.setOrigin({titleBounds.size.x / 2.f, titleBounds.size.y / 2.f});
+    titletext.setPosition({400.0f, 120.0f});
+
+
+    //Set the current state to menu so that when we enter game we at the menu
+    GameState currentState = GameState::Menu;
+    int hoveredIndex = -1;
+
+    // Main Menu Setup
+    std::vector<std::string> mainOptions = {"START GAME", "SETTINGS", "EXIT"};
+    std::vector<sf::Text> mainMenuItems = createMenuItems(font, mainOptions, 280.f, 65.f, 30);
+
+    // Start Sub-Menu Setup (Difficulty & Tutorial)
+    std::vector<std::string> difficulties = {"EASY", "NORMAL", "HARD"};
+    int difficultyIndex = 1; // Default to NORMAL
+
+    std::vector<std::string> startOptions = {
+        "DIFFICULTY: " + difficulties[difficultyIndex],
+        "TUTORIAL",
+        "NEW GAME",
+        "BACK"
+    };
+
+    //understand this
+    std::vector<sf::Text> startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
+
     // Battle Box Setup
     sf::RectangleShape battleBox({380.0f, 120.0f});
     battleBox.setFillColor(sf::Color::Black);
     battleBox.setOutlineColor(sf::Color::White);
     battleBox.setOutlineThickness(3.0f);
     battleBox.setOrigin({380.0f / 2.0f, 120.0f / 2.0f});
-    battleBox.setPosition({width / 2.0f, height / 2.0f + 60.0f});
+    battleBox.setPosition({width / 2.0f, height / 2.0f + 100.0f});
 
     // Boss Sprite Setup
     sf::Sprite Bosssprite(texture3);
     sf::FloatRect bossbounds = Bosssprite.getLocalBounds();
     Bosssprite.setScale({0.1f, 0.1f});
     Bosssprite.setOrigin({bossbounds.size.x / 2.f, bossbounds.size.y / 2.f});
-    Bosssprite.setPosition({width / 2.0f, 60.0f });
+    Bosssprite.setPosition({width / 2.0f, 240.0f });
 
     // Player Sprite Setup
     sf::Sprite Playersprite(texture);
@@ -301,21 +582,29 @@ int main() {
     Playersprite.setScale({0.1f, 0.1f});
     Playersprite.setOrigin({playerbounds.size.x / 2.0f, playerbounds.size.y / 2.0f});
     Playersprite.setPosition(battleBox.getPosition());
-    float speed = 5.0f;
+
+    //standard speed
+
+    float speed = 5.0f ;
 
     // Projectile & Wave Setup
+
     std::vector<Projectile> activeProjectiles;
-    float projectileSpeed = 12.0f;
-    float launchInterval = 0.5f;
+    //standard attacks on normal difficulty
+    float projectileSpeed = 15.0f ;
+    float launchInterval = 0.3f  ;
     sf::Clock waveTriggerClock;
+
     sf::Clock frameClock;
-    float waveInterval = 0.8f;
+    //
+    float waveInterval = 0.8f ;
+
     int wavecount = 0;
 
     // Projectile sprite template
     sf::Sprite projSprite(texture2);
     sf::FloatRect projBounds = projSprite.getLocalBounds();
-    projSprite.setScale({0.1f, 0.1f});
+    projSprite.setScale({0.8f, 0.8f});
     projSprite.setOrigin({projBounds.size.x / 2.f, projBounds.size.y / 2.f});
 
     // Hazard trail dot shape
@@ -323,123 +612,137 @@ int main() {
     hazardDot.setFillColor(sf::Color(255, 69, 0, 200));
     hazardDot.setOrigin({3.0f, 3.0f});
 
+    //used to change current state of game from menu too playing ;
+    //change this and add an endless mode also make it go back to menu if escape pressed during the playing stage
+    bool changeState = false;
+
     while (window.isOpen()) {
         float dt = frameClock.restart().asSeconds();
 
-        while (const std::optional<sf::Event> event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
-                window.close();
-            }
-            else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-                if (keyPressed->scancode == sf::Keyboard::Scancode::Escape) {
-                    window.close();
-                }
-            }
-        }
+        //this statemet check that if there new games is pressed we change menu too the recent menu and end the previous menu
+        if (!changeState){
 
-        // Call player movement with box collision constraint yay I love when they suffer
-        handlePlayerMovement(Playersprite, speed, battleBox);
+            //required functions for menu
+            starfieldBackground(myStars, starBackground);
+            menu_Interaction(window, view, currentState, hoveredIndex,
+                 mainMenuItems, startMenuItems, startOptions,
+                 difficultyIndex, difficulties, font, changeState, speed, projectileSpeed, waveInterval, launchInterval);
 
-        bool nextwave = false;
-        if (wavecount <= 3) {
-            nextwave = allLaunched(activeProjectiles);
+            rendering(window, starBackground, currentState, titletext,
+                    mainMenuItems, startMenuItems, font, difficulties[difficultyIndex]);
+
         }
         else {
-            nextwave = activeProjectiles.empty();
-        }
-
-        if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) {
-            waveTriggerClock.restart();
-            float spawnposition = 40.0f;
-
-            float leftX = width * 0.25f;
-            float middleX = width * 0.5f;
-            float rightX = width * 0.75f;
-
-            if (wavecount == 0) {
-                crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
-            }
-            else if (wavecount == 1) {
-                crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
-            }
-            else if (wavecount == 2) {
-                crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);
-            }
-            else if (wavecount == 3) {
-                crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);
-                crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
-                crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
-            }
-            else if (wavecount == 4) {
-                horizontal(activeProjectiles, battleBox, projectileSpeed, -45.0f);
-                horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
-            }
-            else if (wavecount == 5) {
-                horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
-                horizontal(activeProjectiles, battleBox, projectileSpeed, 30.0f);
-            }
-            else if (wavecount == 6) {
-                pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y}, projectileSpeed);
-            }
-            else if (wavecount == 7) {
-                pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
-            }
-            else if (wavecount == 8) {
-                pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
-            }
-            else if (wavecount == 9) {
-                homingdarts(activeProjectiles, battleBox, middleX);
-            }
-            else if (wavecount == 10) {
-                homingdarts(activeProjectiles, battleBox, rightX);
-            }
-            else if (wavecount == 11) {
-                homingdarts(activeProjectiles, battleBox, leftX);
+            while (const std::optional<sf::Event> event = window.pollEvent()) {
+                if (event->is<sf::Event::Closed>()) {
+                    window.close();
+                }
+                else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+                    if (keyPressed->scancode == sf::Keyboard::Scancode::Escape) {
+                            currentState = GameState::Menu; // (removed the "GameState" type so this changes the real variable instead of making a new local one)
+                            hoveredIndex = -1;
+                            changeState = false ; //a pause menu can be created :
+                    }
+                }
             }
 
-            wavecount = (wavecount + 1) % 12; //loops the game for now
-        }
-        //checks for the projectile updates 
-        updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
+            // Call player movement with box collision constraint yay I love when they suffer
+            handlePlayerMovement(Playersprite, speed, battleBox);
 
-        // checks collisions
-        if (collision(activeProjectiles, Playersprite.getPosition())) {
-            Playersprite.setPosition(battleBox.getPosition()); // Reset to center on hit for now
-        }
-
-        // Dialogue box positioning right next to the boss
-        sf::Vector2f bossPos = Bosssprite.getPosition();
-        sf::Vector2f bubbleOffset(65.0f, -35.0f);
-
-        speechBubble.setPosition(bossPos + bubbleOffset);
-        speech.setPosition(speechBubble.getPosition() + sf::Vector2f(10.0f, 8.0f));
-
-        window.clear();
-
-        // Draw static UI and Box first
-        window.draw(battleBox);
-        window.draw(Bosssprite);
-        window.draw(speechBubble);
-        window.draw(speech);
-
-        // Draw Projectiles
-        for (const auto& proj : activeProjectiles) {
-            for (const auto& hazard : proj.trail) {
-                hazardDot.setPosition(hazard.position);
-                window.draw(hazardDot);
+            bool nextwave = false;
+            if (wavecount <= 3) {
+                nextwave = allLaunched(activeProjectiles);
+            }
+            else {
+                nextwave = activeProjectiles.empty();
             }
 
-            if (proj.spawnDelay <= 0.0f && (proj.isLaunched || proj.launchTimer > 0.0f)) {
-                projSprite.setPosition(proj.position);
-                window.draw(projSprite);
+            if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) {
+                waveTriggerClock.restart();
+                float spawnposition = 220.0f;
+
+                float leftX = width * 0.25f;
+                float middleX = width * 0.5f;
+                float rightX = width * 0.75f;
+
+                if (wavecount == 0) {
+                    crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
+                }
+                else if (wavecount == 1) {
+                    crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
+                }
+                else if (wavecount == 2) {
+                    crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);
+                }
+                else if (wavecount == 3) {
+                    crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);
+                    crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
+                    crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
+                }
+                else if (wavecount == 4) {
+                    horizontal(activeProjectiles, battleBox, projectileSpeed, -45.0f);
+                    horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+                }
+                else if (wavecount == 5) {
+                    horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+                    horizontal(activeProjectiles, battleBox, projectileSpeed, 30.0f);
+                }
+                else if (wavecount == 6) {
+                    pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y}, projectileSpeed);
+                }
+                else if (wavecount == 7) {
+                    pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
+                }
+                else if (wavecount == 8) {
+                    pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
+                }
+                else if (wavecount == 9) {
+                    homingdarts(activeProjectiles, battleBox, middleX);
+                }
+                else if (wavecount == 10) {
+                    homingdarts(activeProjectiles, battleBox, rightX);
+                }
+                else if (wavecount == 11) {
+                    homingdarts(activeProjectiles, battleBox, leftX);
+                }
+
+                wavecount = (wavecount + 1) % 12; //loops the game for now
             }
-        }
+            //checks for the projectile updates
+            updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
 
-        // Draw Player on top
-        window.draw(Playersprite);
+            // checks collisions
+            if (collision(activeProjectiles, Playersprite.getPosition())) {
+                Playersprite.setPosition(battleBox.getPosition()); // Reset to center on hit for now
+            }
 
-        window.display(); //just the display
+            // Dialogue box positioning
+            sf::Vector2f bossPos = Bosssprite.getPosition();
+            sf::Vector2f bubbleOffset(65.0f, -35.0f);
+            speechBubble.setPosition(bossPos + bubbleOffset);
+            speech.setPosition(speechBubble.getPosition() + sf::Vector2f(10.0f, 8.0f));
+            window.clear();
+             // Draw static UI and Box first cuz
+            window.draw(battleBox);
+            window.draw(Bosssprite);
+            window.draw(speechBubble);
+            window.draw(speech);
+            // draw the projectiles with the hazard trail
+            for (const auto& proj : activeProjectiles) {
+                for (const auto& hazard : proj.trail) {
+                    hazardDot.setPosition(hazard.position);
+                    window.draw(hazardDot);
+                }
+
+                if (proj.spawnDelay <= 0.0f && (proj.isLaunched || proj.launchTimer > 0.0f)) {
+                    projSprite.setPosition(proj.position);
+                    window.draw(projSprite);
+                }
+            }
+            // Draw Player on top
+            window.draw(Playersprite);
+            window.display();
+            }
     }
-
     return 0;
 }
