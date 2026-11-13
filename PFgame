@@ -438,7 +438,7 @@ int main() {
         // Draw Player on top
         window.draw(Playersprite);
 
-        window.display();
+        window.display(); //just the display
     }
 
     return 0;
