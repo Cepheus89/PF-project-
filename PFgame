@@ -1,0 +1,445 @@
+#include <iostream>
+#include <cmath>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#include <optional>
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+
+// Trail node struct for the dangerous path
+struct TrailNode {
+    sf::Vector2f position;
+    float lifeTimer = 1.0f;
+};
+
+// Lightweight struct for projectiles
+struct Projectile {
+    sf::Vector2f position;
+    sf::Vector2f velocity;
+    bool isLaunched = true;
+    float launchTimer = 0.0f;
+    std::vector<TrailNode> trail;
+    float trailTimer = 0.0f;
+    bool leavesTrail = false;//basically whether the projectiles leave the dangerous trail or not
+    bool tracksPlayer = true; //many of the projectiles I use are homing, ill set this to true if I want homing projectiles and False if I don't
+    float spawnDelay = 0.0f;
+};
+
+// Player movement function with box containment
+void handlePlayerMovement(sf::Sprite& playerSprite, float speed, const sf::RectangleShape& battleBox) { //we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
+    sf::Vector2f pos = playerSprite.getPosition(); //ooh so apparently as we go down, distance increase? oh well
+    //the movement stuff is self explanatory except one thing which I wrote down
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::S)) {
+        pos.y+=speed; //so over here, the tutorial told me that y actually increases as we go down. Be careful of this omg I hate SFML
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::W)) {
+        pos.y-=speed;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::D)) {
+        pos.x+=speed;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::A)) {
+        pos.x-=speed;
+    }
+
+    // exact explanation at the bottom
+    sf::Vector2f boxPosition = battleBox.getPosition(); //obtaining the exact coordinates of the box centre
+    sf::Vector2f boxSize = battleBox.getSize(); //getting the width and height of the box because I tried to define the height and width
+                                                //directly into the code itself and I realized that I might need to change it later so I used getSize. Cool thing
+    float left = boxPosition.x - (boxSize.x / 2.0f) + 8.0f;
+    float right = boxPosition.x + (boxSize.x / 2.0f) - 8.0f;
+    float top = boxPosition.y - (boxSize.y / 2.0f) + 8.0f;
+    float bottom = boxPosition.y + (boxSize.y / 2.0f) - 8.0f;
+
+    if (pos.x < left) {
+        pos.x = left;
+    }
+    if (pos.x > right) {
+        pos.x = right;
+    }
+    if (pos.y < top) {
+        pos.y = top;
+    }
+    if (pos.y > bottom) {
+        pos.y = bottom;
+    }
+    playerSprite.setPosition(pos);
+    //ok so basically I wanted to do the Undertale box thing where the player is trapped inside a box. Initially my logic included that if my sprites position and the box line position was the same
+    //(next line)then the player position would be set to the box position. But I noticed that the half the heart was actually clipping through, so I added a 12 pt barrier which was too large and then
+    //(next line)after some experimenting, I found that 8 was good yay
+}
+
+// The first wave stuff, crescent bullets.
+//bullets need to be launched more frequently
+void crescent(std::vector<Projectile>& activeProjectiles, float crescentcentre, float spawnposition, float spawnInterval, float launchInterval) {
+    int totalBullets = 7;
+    float totalSpawnTime = (totalBullets - 1) * spawnInterval;
+    for (int i = 0; i < totalBullets; ++i) {
+        float step = 1.0f / (totalBullets - 1); 
+        float horizontalshift = -0.5f+(i*step); //shift for each bullet
+        float horizontalspawn = crescentcentre+(horizontalshift*180.0f); //basically the spawn position, change the 180 to a higher number to create a bigger spread and vice versa
+        float arcDip = (0.25f-(horizontalshift*horizontalshift))*60.0f; //same logic as above one
+        sf::Vector2f spawnPos= {horizontalspawn,spawnposition-arcDip}; //basically the position it spawns at, I hope this doesn't need an explanation
+        Projectile proj;
+        proj.position = spawnPos;
+        proj.isLaunched = false;
+        proj.spawnDelay = i * spawnInterval;
+
+        proj.launchTimer = (totalSpawnTime - proj.spawnDelay) + launchInterval + (i * 1.0f); 
+        proj.tracksPlayer = true;
+        proj.leavesTrail = false;
+
+        activeProjectiles.push_back(proj);
+    }
+}
+
+// The second wave stuff, horizontal projectiles
+void horizontal(std::vector<Projectile>& activeProjectiles, const sf::RectangleShape& battleBox, float projectileSpeed, float projectileposition) {
+    sf::Vector2f boxP = battleBox.getPosition(); //boxPosition too large a name and im lazeh :P
+    sf::Vector2f boxSize = battleBox.getSize(); //same thing
+
+    float height = boxP.y + projectileposition; //basically the height at which the projectile spawns, we HATE this function
+    float left = boxP.x - boxSize.x / 2.0f-90.0f;
+    float right = boxP.x + boxSize.x / 2.0f+90.0f;
+    //ok so I added the +90 and -90 because initially I dind't have them and the projectiles were spawning like RIGHT on the border and it was so weird ew. So I added the +90 and -90
+    Projectile pLeft;
+    pLeft.position = {left, height+20.0f};
+    pLeft.velocity = {projectileSpeed, 0.0f};
+    pLeft.leavesTrail = true;
+    Projectile pRight;
+    pRight.position = {right, height};
+    pRight.velocity = {-projectileSpeed, 0.0f};
+    pRight.leavesTrail = true;
+    activeProjectiles.push_back(pLeft);
+    activeProjectiles.push_back(pRight);
+}
+
+// This is the attack where the projectiles spawn in a circle and burst outwards
+void pinwheel(std::vector<Projectile>& activeProjectiles, sf::Vector2f centerPos, float projectileSpeed) {
+    int numBullets = 8;
+    for (int i = 0; i < numBullets; ++i) { //this is basically the loop for each of the bullets(pretty self explanatory)
+        float angle = (2.0f * 3.14f * i) / numBullets; // ok so over here, I was having trouble understanding how I was supposed to do this and apparently the cmath library wouldve worked well. Lord praise "Basic Coding" yt channel
+        //the logic for the angle is pretty simple, so basically what im doing is im using radians for the angle of each projectile seperately
+        // 2𝝅 is the total angle and I multiply it by i to get the angle of each seperate projectile. So for the first projectile, i is 0 so angle comes out to be 0, 2nd projectile i is 1 so 2𝝅*1/8 = 𝝅/4 or 45 degrees. Rest is simple
+        sf::Vector2f dir = {std::cos(angle), std::sin(angle)}; //simple SOHCAHTOA stuff im not explaining this
+
+        Projectile proj;
+        proj.position = centerPos;
+        proj.velocity = dir * (projectileSpeed * 0.75f);
+        proj.isLaunched = false;        
+        proj.launchTimer = 1.0f;       
+        proj.tracksPlayer = false;     
+        proj.leavesTrail = false;
+        activeProjectiles.push_back(proj);
+    }
+}
+
+// for the 4th attack, the homing projectiles
+void homingdarts(std::vector<Projectile>& activeProjectiles, const sf::RectangleShape& battleBox, float centerX) {
+    sf::Vector2f boxSize = battleBox.getSize();//simple enough, obtaining size, copy pasted this mweheheh (FROM THE CODE ABOVE NOT AI OMG)
+
+    for (int i = 0; i < 4; ++i) {
+        Projectile proj;
+        float horizontallocation = -60.0f + i * 40.0f; // its basically where the projectile spawns in the horizontal position, -60 being the initial one for the first projectile
+        proj.position = {centerX + horizontallocation, battleBox.getPosition().y - boxSize.y / 2.0f - 15.0f}; //initial projectile location
+        proj.isLaunched = false; //initially not launched
+        proj.launchTimer = 0.7f + (i * 0.2f); //launched at intervals with i
+        proj.tracksPlayer = true;      //well like, duh
+        proj.leavesTrail = false; //no trail for this one
+        activeProjectiles.push_back(proj);
+    }
+}
+//this is to check if the projectiles of the wave have launched because without this, my first crescent had just started firing and the next one would start spawning like holy
+bool allLaunched(const std::vector<Projectile>& activeProjectiles) {
+    for (const auto& proj : activeProjectiles) {
+        if (proj.isLaunched==false || proj.spawnDelay > 0.0f) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// update projectiles but it makes sense to me brrrrr
+void updateProjectiles(std::vector<Projectile>& activeProjectiles, float t, unsigned int width, unsigned int height, sf::Vector2f playerPos, float projectileSpeed) {
+    for (int i = 0; i < (int)activeProjectiles.size(); ) {
+        Projectile& p = activeProjectiles[i];   //p is the current projectile in the list we're considering in relation to i
+
+        // projectile hasn't appeared yet, just count down its spawn delay and skip everything else
+        if (p.spawnDelay > 0.0f) {
+            p.spawnDelay -= t;
+            if (p.spawnDelay > 0.0f) {
+                i++;
+                continue;
+            }
+        }
+        if (!p.isLaunched) {
+            p.launchTimer -= t; //subtraction from the launch timer, its also why we subtracted from the spawnDelay above
+            if (p.launchTimer <= 0.0f) {
+                if (p.tracksPlayer) {
+                    sf::Vector2f direction = {playerPos.x - p.position.x, playerPos.y - p.position.y};
+                    float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                    if (length != 0.0f) {
+                        direction /= length;
+                    }
+                    p.velocity = direction * projectileSpeed;
+                }
+                p.isLaunched = true;
+            }
+        } 
+        else { //projectile is launched
+            p.position += p.velocity; //takes your point and adds the velocity onto it every frame which moves it
+            // if this projectile leaves a trail, insert the trail every frame
+            if (p.leavesTrail) {
+                p.trailTimer += t;
+                if (p.trailTimer >= 0.03f) {
+                    p.trailTimer = 0.0f;
+                    p.trail.push_back({p.position, 1.0f});
+                }
+            }
+        }
+
+        // age the trail points
+        for (int j = 0; j < (int)p.trail.size(); ) {
+            p.trail[j].lifeTimer -= t;
+            if (p.trail[j].lifeTimer <= 0.0f) {
+                p.trail.erase(p.trail.begin() + j);   //start erasing the previous trail
+            } else {
+                j++;
+            }
+        }
+
+        bool isOffScreen = (p.position.y > height + 40 || p.position.y < -40 || p.position.x < -100 || p.position.x > width + 100);
+        if (isOffScreen && p.isLaunched) {
+            activeProjectiles.erase(activeProjectiles.begin() + i);   //start erasing previous projectiles once they go offscreen
+        } else {
+            i++;
+        }
+    }
+}
+
+// For the collisions with projectiles logic here we go brrrrrrrrrrrr
+bool collision(const std::vector<Projectile>& activeProjectiles, sf::Vector2f playerPos) {
+    for (const auto& proj : activeProjectiles) {
+        if (proj.isLaunched) { //well like, yeah. It should only run if its launched
+            float distX = playerPos.x - proj.position.x; //basically the horizontal distance between the projectile and the player
+            float distY = playerPos.y - proj.position.y; //same thing but vertical
+            if (std::sqrt(distX * distX + distY * distY) < 10.0f) { //pythagoras theorem shEEEESh
+                return true;
+            }
+        }
+
+        for (const auto& hazard : proj.trail) { //same thing over here but for the trail 
+            float distX = playerPos.x - hazard.position.x;
+            float distY = playerPos.y - hazard.position.y;
+            if (std::sqrt(distX * distX + distY * distY) < 10.0f) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+int main() {
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+    unsigned int width = 640;
+    unsigned int height = 360;
+    sf::RenderWindow window(sf::VideoMode({ width, height }), "Bullet Requiem");
+    window.setFramerateLimit(30);
+
+    // Load Textures & Fonts
+    sf::Texture texture;
+    if (!texture.loadFromFile("Sprites/hearttemporary.png")) {
+        std::cerr << "Failed to load Sprites/hearttemporary.png\n";
+        return -1;
+    }
+    sf::Font font;
+    if (!font.openFromFile("Sprites/font.ttf")) {
+        std::cerr << "Failed to load Sprites/font.ttf\n";
+        return -1;
+    }
+    sf::Texture texture2;
+    if (!texture2.loadFromFile("Sprites/projectileonetemporary.png")) {
+        std::cerr << "Failed to load Sprites/projectileonetemporary.png\n";
+        return -1;
+    }
+    sf::Texture texture3;
+    if (!texture3.loadFromFile("Sprites/Bosssprite.png")) {
+        std::cerr << "Failed to load Sprites/Bosssprite.png\n";
+        return -1;
+    }
+    // Speech bubble setup
+    sf::RectangleShape speechBubble({180.0f, 65.0f});
+    speechBubble.setFillColor(sf::Color::White);
+    speechBubble.setOutlineColor(sf::Color::Black);
+    speechBubble.setOutlineThickness(4.0f);
+
+    sf::Text speech(font);
+    speech.setString("Testing 12-step sequence");
+    speech.setCharacterSize(12);
+    speech.setFillColor(sf::Color::Black);
+
+    // Battle Box Setup
+    sf::RectangleShape battleBox({380.0f, 120.0f});
+    battleBox.setFillColor(sf::Color::Black);
+    battleBox.setOutlineColor(sf::Color::White);
+    battleBox.setOutlineThickness(3.0f);
+    battleBox.setOrigin({380.0f / 2.0f, 120.0f / 2.0f});
+    battleBox.setPosition({width / 2.0f, height / 2.0f + 60.0f});
+
+    // Boss Sprite Setup
+    sf::Sprite Bosssprite(texture3);
+    sf::FloatRect bossbounds = Bosssprite.getLocalBounds();
+    Bosssprite.setScale({0.1f, 0.1f});
+    Bosssprite.setOrigin({bossbounds.size.x / 2.f, bossbounds.size.y / 2.f});
+    Bosssprite.setPosition({width / 2.0f, 60.0f });
+
+    // Player Sprite Setup
+    sf::Sprite Playersprite(texture);
+    sf::FloatRect playerbounds = Playersprite.getLocalBounds();
+    Playersprite.setScale({0.1f, 0.1f});
+    Playersprite.setOrigin({playerbounds.size.x / 2.0f, playerbounds.size.y / 2.0f});
+    Playersprite.setPosition(battleBox.getPosition());
+    float speed = 5.0f;
+
+    // Projectile & Wave Setup
+    std::vector<Projectile> activeProjectiles;
+    float projectileSpeed = 12.0f;
+    float launchInterval = 0.5f;
+    sf::Clock waveTriggerClock;
+    sf::Clock frameClock;
+    float waveInterval = 0.8f;
+    int wavecount = 0;
+
+    // Projectile sprite template
+    sf::Sprite projSprite(texture2);
+    sf::FloatRect projBounds = projSprite.getLocalBounds();
+    projSprite.setScale({0.1f, 0.1f});
+    projSprite.setOrigin({projBounds.size.x / 2.f, projBounds.size.y / 2.f});
+
+    // Hazard trail dot shape
+    sf::CircleShape hazardDot(3.0f);
+    hazardDot.setFillColor(sf::Color(255, 69, 0, 200));
+    hazardDot.setOrigin({3.0f, 3.0f});
+
+    while (window.isOpen()) {
+        float dt = frameClock.restart().asSeconds();
+
+        while (const std::optional<sf::Event> event = window.pollEvent()) {
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+            }
+            else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+                if (keyPressed->scancode == sf::Keyboard::Scancode::Escape) {
+                    window.close();
+                }
+            }
+        }
+
+        // Call player movement with box collision constraint yay I love when they suffer
+        handlePlayerMovement(Playersprite, speed, battleBox);
+
+        bool nextwave = false;
+        if (wavecount <= 3) {
+            nextwave = allLaunched(activeProjectiles);
+        }
+        else {
+            nextwave = activeProjectiles.empty();
+        }
+
+        if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) {
+            waveTriggerClock.restart();
+            float spawnposition = 40.0f;
+
+            float leftX = width * 0.25f;
+            float middleX = width * 0.5f;
+            float rightX = width * 0.75f;
+
+            if (wavecount == 0) {
+                crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
+            }
+            else if (wavecount == 1) {
+                crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
+            }
+            else if (wavecount == 2) {
+                crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);
+            }
+            else if (wavecount == 3) {
+                crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);
+                crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
+                crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
+            }
+            else if (wavecount == 4) {
+                horizontal(activeProjectiles, battleBox, projectileSpeed, -45.0f);
+                horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+            }
+            else if (wavecount == 5) {
+                horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+                horizontal(activeProjectiles, battleBox, projectileSpeed, 30.0f);
+            }
+            else if (wavecount == 6) {
+                pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y}, projectileSpeed);
+            }
+            else if (wavecount == 7) {
+                pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
+            }
+            else if (wavecount == 8) {
+                pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
+            }
+            else if (wavecount == 9) {
+                homingdarts(activeProjectiles, battleBox, middleX);
+            }
+            else if (wavecount == 10) {
+                homingdarts(activeProjectiles, battleBox, rightX);
+            }
+            else if (wavecount == 11) {
+                homingdarts(activeProjectiles, battleBox, leftX);
+            }
+
+            wavecount = (wavecount + 1) % 12; //loops the game for now
+        }
+        //checks for the projectile updates 
+        updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
+
+        // checks collisions
+        if (collision(activeProjectiles, Playersprite.getPosition())) {
+            Playersprite.setPosition(battleBox.getPosition()); // Reset to center on hit for now
+        }
+
+        // Dialogue box positioning right next to the boss
+        sf::Vector2f bossPos = Bosssprite.getPosition();
+        sf::Vector2f bubbleOffset(65.0f, -35.0f);
+
+        speechBubble.setPosition(bossPos + bubbleOffset);
+        speech.setPosition(speechBubble.getPosition() + sf::Vector2f(10.0f, 8.0f));
+
+        window.clear();
+
+        // Draw static UI and Box first
+        window.draw(battleBox);
+        window.draw(Bosssprite);
+        window.draw(speechBubble);
+        window.draw(speech);
+
+        // Draw Projectiles
+        for (const auto& proj : activeProjectiles) {
+            for (const auto& hazard : proj.trail) {
+                hazardDot.setPosition(hazard.position);
+                window.draw(hazardDot);
+            }
+
+            if (proj.spawnDelay <= 0.0f && (proj.isLaunched || proj.launchTimer > 0.0f)) {
+                projSprite.setPosition(proj.position);
+                window.draw(projSprite);
+            }
+        }
+
+        // Draw Player on top
+        window.draw(Playersprite);
+
+        window.display();
+    }
+
+    return 0;
+}
