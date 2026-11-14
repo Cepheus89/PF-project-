@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="PfGame.vcxproj" Id="987e8b99-2763-464e-b78e-434695683db0" />
+</Solution>

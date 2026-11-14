@@ -542,20 +542,20 @@ int main() {
 
     // Load Textures & Fonts
     Texture texture;
-    if (!texture.loadFromFile("Sprites/hearttemporary.png")) {
+    if (!texture.loadFromFile("Assets/hearttemporary.png")) {
         return -1;
     }
     Font font;
-    if (!font.openFromFile("Sprites/font.ttf")) {
+    if (!font.openFromFile("Assets/font.ttf")) {
         return -1;
     }
     Texture texture2;
     //resize this pls
-    if (!texture2.loadFromFile("Sprites/frostattack.png")) {
+    if (!texture2.loadFromFile("Assets/frostattack.png")) {
         return -1;
 }
     Texture texture3;
-    if (!texture3.loadFromFile("Sprites/Bosssprite.png")) {
+    if (!texture3.loadFromFile("Assets/Bosssprite.png")) {
         return -1;
     }
     // Speech bubble setup
@@ -661,7 +661,7 @@ int main() {
     
     //load SoundBuffer before while window.isOpen loop, so it only loads once
     SoundBuffer shootBuffer;
-    if (!shootBuffer.loadFromFile("Sprites/snd_damage.mp3")) {
+    if (!shootBuffer.loadFromFile("Assets/snd_damage.mp3")) {
         return -1; // if audio file doesn't exist it will exit
     }
     //load Sound which actually plays/makes sound
@@ -673,7 +673,7 @@ int main() {
     float shakeTimer = 0.0f; // Will keep track of duration of active shake
 
     Music bgMusic;
-    if (!bgMusic.openFromFile("Sprites/bgm.ogg")) {
+    if (!bgMusic.openFromFile("Assets/bgm.ogg")) {
         return -1;
     }
     bgMusic.setVolume(musicVolume);
