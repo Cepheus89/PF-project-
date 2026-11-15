@@ -17,7 +17,8 @@ enum class GameState {
     StartMenu, // Sub-menu after pressing START GAME
     Tutorial,  // Tutorial screen
     Playing,
-    Settings
+    Settings,
+    Paused // (Haras)
 };
 
 struct Star {
@@ -85,8 +86,8 @@ vector<Text> createMenuItems(const Font& font, const vector<string>& options, fl
 // Event polling and hover interaction logic
 void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                       int& hoveredIndex, vector<Text>& mainMenuItems,
-                      vector<Text>& startMenuItems, vector<string>& startOptions,
-                      int& difficultyIndex, const vector<string>& difficulties, const Font& font, bool& changeState,
+                      vector<Text>& startMenuItems, vector<Text>& pauseMenuItems, vector<string>& startOptions,
+                      int& difficultyIndex, const vector<string>& difficulties, const Font& font, bool& changeState, GameState& previousState,
                       float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval,float& soundVolume, float& musicVolume, float& shakeIntensity) { // (Haras)
     //Making menu functional for soundvolume and musicvolume and shakeintensity changes (Haras)
     //gets new mouse pixel also works on all types / sizes of the screen
@@ -102,6 +103,10 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
         activeMenuItems = &mainMenuItems;   // when in main menu load up the main menu items ;
     else if (currentState == GameState::StartMenu)  //when in sub menu load up the start menu items
         activeMenuItems = &startMenuItems;
+    else if (currentState == GameState::Paused) {
+        activeMenuItems = &pauseMenuItems;
+    }
+
 
     // checking all events
     while (const optional event = window.pollEvent()) {
@@ -121,8 +126,10 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 if (currentState == GameState::Menu) {
                     if (hoveredIndex == 0)
                         currentState = GameState::StartMenu; // Goes to Start Sub-Menu
-                    else if (hoveredIndex == 1)
+                    else if (hoveredIndex == 1) {
+                        previousState = GameState::Menu;
                         currentState = GameState::Settings;
+                    }
                     else if (hoveredIndex == 2)
                         window.close();
                 }
@@ -148,6 +155,23 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     else if (hoveredIndex == 3)
                         currentState = GameState::Menu;     // take back to main menu
                 }
+                else if (currentState == GameState::Paused) {
+                    if (hoveredIndex == 0) {
+                        currentState = GameState::Playing;
+                        changeState = true;
+
+                    }
+                    else if (hoveredIndex == 1) {
+                        previousState = GameState::Paused;
+                        currentState = GameState::Settings;
+                    }
+                    else if (hoveredIndex == 2) {
+                        currentState = GameState::Menu;
+                    }
+                    else if (hoveredIndex == 3) {
+                        window.close();
+                    }
+                }
             }
         }
 
@@ -157,8 +181,15 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 if (currentState == GameState::StartMenu || currentState == GameState::Settings) {
                     currentState = GameState::Menu;
                 }
+                else if (currentState == GameState::Settings) {
+                    currentState = previousState;
+                }
                 else if (currentState == GameState::Tutorial || currentState == GameState::Playing) {
                     currentState = GameState::StartMenu;
+                }
+                else if (currentState == GameState::Paused) {
+                    currentState = GameState::Playing;
+                    changeState = true;
                 }
                 //close game if escape pressed in the other screen
                 else if (currentState == GameState::Menu){
@@ -251,7 +282,7 @@ void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 // Rendering all the stuff for menu
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
                const Text& titleText, const vector<Text>& mainMenuItems,
-               const vector<Text>& startMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity) {
+               const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity) {
     //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras)
     
     window.clear(Color(10, 10, 15));
@@ -288,6 +319,14 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
     else if (currentState == GameState::Playing) {
         Text playText = createCenteredText(font, "GAMEPLAY SCREEN \n\nDifficulty: " + currentDifficulty + "\n\n(Press ESC for Menu)", 26, {400.f, 300.f}, Color::White);
         window.draw(playText);
+    }
+
+    else if (currentState == GameState::Paused) {
+        Text pausetitle = createCenteredText(font, "PAUSED", 40, { 400.f, 130.f }, Color::Yellow);
+        window.draw(pausetitle);
+        for (const auto& item : pauseMenuItems) {
+            window.draw(item);
+        }
     }
     else if (currentState == GameState::Settings) {
         //update static 100 % string to dynamically display variable deals with both SF, BGM, SI (Haras)
@@ -603,6 +642,10 @@ int main() {
     //understand this
     vector<Text> startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
 
+    vector<string> pauseOptions = { "RESUME", "SETTINGS", "MAIN MENU", "EXIT GAME" };
+    vector<Text> pauseMenuItems = createMenuItems(font, pauseOptions, 240.f, 60.f, 26);
+    GameState previousState = GameState::Menu;
+
 
     // Battle Box Setup
     RectangleShape battleBox({380.0f, 120.0f});
@@ -692,8 +735,8 @@ int main() {
             starfieldBackground(myStars, starBackground, dt);
             // integrated soundvolume and musicvolume variable
             menu_Interaction(window, view, currentState, hoveredIndex,
-                 mainMenuItems, startMenuItems, startOptions,
-                 difficultyIndex, difficulties, font, changeState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
+                 mainMenuItems, startMenuItems, pauseMenuItems, startOptions,
+                 difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
 
             bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
@@ -711,7 +754,7 @@ int main() {
             }
             // integrated soundvolume and musicVolume variable
             rendering(window, starBackground, currentState, titletext,
-            mainMenuItems, startMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity);
+            mainMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity);
 
         }
         else {
@@ -723,7 +766,7 @@ int main() {
                     //Change this so it shows a black screen as a warning of shutting down
 
                         if (keyPressed->scancode == Keyboard::Scancode::Escape) {
-                            currentState = GameState::Menu; // (removed the "GameState" type so this changes the real variable instead of making a new local one)
+                            currentState = GameState::Paused; // 
                             hoveredIndex = -1;
                             changeState = false ; //a pause menu can be created :
                         }
