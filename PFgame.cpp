@@ -87,8 +87,8 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                       int& hoveredIndex, vector<Text>& mainMenuItems,
                       vector<Text>& startMenuItems, vector<string>& startOptions,
                       int& difficultyIndex, const vector<string>& difficulties, const Font& font, bool& changeState,
-                      float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval,float& soundVolume, float& musicVolume, float& shakeIntensity) {
-    //Making menu functional for soundvolume and musicvolume and shakeintensity changes
+                      float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval,float& soundVolume, float& musicVolume, float& shakeIntensity) { // (Haras)
+    //Making menu functional for soundvolume and musicvolume and shakeintensity changes (Haras)
     //gets new mouse pixel also works on all types / sizes of the screen
 
     Vector2i mousePixel = Mouse::getPosition(window);
@@ -166,23 +166,23 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 }
             }
 
-            //Making menu functional for soundvolume and musicvolume changes
+            //Making menu functional for soundvolume and musicvolume changes (Haras)
             if (currentState == GameState::Settings) {
-                // For SF
+                // For SF (Haras)
                 if (keyPressed->code == Keyboard::Key::Left) {
                     soundVolume = max(0.0f, soundVolume - 10.0f); //Decrease SF by 10. Cannot go below zero
                 }
                 else if (keyPressed->code == Keyboard::Key::Right) {
                     soundVolume = min(100.0f, soundVolume + 10.0f); //Increase SF by 10. Cannot go above 100
                 }
-                // For BGM
+                // For BGM (Haras)
                 else if (keyPressed->code == Keyboard::Key::Up) {
                     musicVolume = min(100.0f, musicVolume + 10.0f); //Increase BGM by 10. Cannot go above 100
                 }
                 else if (keyPressed->code == Keyboard::Key::Down) {
                     musicVolume = min(100.0f, musicVolume - 10.0f); //Decrease BGM by 10. Cannot go below zero
                 }
-                // For screen shake upon collision intensity
+                // For screen shake upon collision intensity (Haras)
                 else if (keyPressed->code == Keyboard::Key::W) {
                     shakeIntensity = min(20.0f, shakeIntensity + 1.0f); //Increase SI
                 }
@@ -229,14 +229,14 @@ void starfieldCreation(vector<Star>& myStars) {
 }
 
 // Background star movement reset bound at 600px height
-// implemented delta-time for movement so it is independent of fps
+// implemented delta-time for movement so it is independent of fps (Haras)
 void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt) {
     starfield.clear();
     //clear the previious vertex array so a new can be loaded
     //change the position with updating new height and looping star back to front when it reaches end of the screen
     //checks vector array for the position and also updates it their
     for (auto& s : myStar) {
-        // implemented delta-time for movement so it is independent of fps
+        // implemented delta-time for movement so it is independent of fps (Haras)
         s.position.y += s.speed * dt * 30.0f;
         if (s.position.y > 600.f) {
             s.position.y = 0.f;
@@ -252,7 +252,7 @@ void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
                const Text& titleText, const vector<Text>& mainMenuItems,
                const vector<Text>& startMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity) {
-    //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable
+    //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras)
     
     window.clear(Color(10, 10, 15));
     
@@ -290,7 +290,7 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
         window.draw(playText);
     }
     else if (currentState == GameState::Settings) {
-        //update static 100 % string to dynamically display variable deals with both SF, BGM, SI
+        //update static 100 % string to dynamically display variable deals with both SF, BGM, SI (Haras)
         string settingsStr = " SETTINGS MENU \n\n[ Sound: " + to_string(static_cast<int>(soundVolume)) + "% ] <- Left/Right \n[ BGM: " + to_string(static_cast<int>(musicVolume)) + "% ] <- Up/Down\n[ Shake: " + to_string(static_cast<int>(shakeIntensity)) + " ] <- W/S\n\n[Controls:WASD + MOUSE]\n\n(Press ESC for Menu)";
         Text settingsText = createCenteredText(font, settingsStr, 22, {400.f, 300.f}, Color::White);
         window.draw(settingsText);
@@ -466,7 +466,7 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
             }
         } 
         else { //projectile is launched
-            //implemented delta-time(Bazil did NOT comment this actually)
+            //implemented delta-time (Haras)
             p.position += p.velocity * t * 30.0f; //takes your point and adds the velocity onto it every frame which moves it
             // if this projectile leaves a trail, insert the trail every frame
             if (p.leavesTrail) {
@@ -525,7 +525,7 @@ int main() {
     unsigned int width = 800;
     unsigned int height = 600;
     RenderWindow window(VideoMode({ width, height }), "Bullet Requiem");
-    window.setFramerateLimit(60); // increased fps from 30 to 60 for smoother gameplay
+    window.setFramerateLimit(60); // increased fps from 30 to 60 for smoother gameplay (Haras)
 
     View view(FloatRect({0.0f, 0.0f}, {static_cast<float>(width), static_cast<float>(height)}));
     window.setView(view);
@@ -659,20 +659,20 @@ int main() {
     //change this and add an endless mode also make it go back to menu if escape pressed during the playing stage
     bool changeState = false;
     
-    //load SoundBuffer before while window.isOpen loop, so it only loads once
+    //load SoundBuffer before while window.isOpen loop, so it only loads once (Haras)
     SoundBuffer shootBuffer;
     if (!shootBuffer.loadFromFile("Assets/snd_damage.mp3")) {
-        return -1; // if audio file doesn't exist it will exit
+        return -1; // if audio file doesn't exist it will exit (Haras)
     }
-    //load Sound which actually plays/makes sound
+    //load Sound which actually plays/makes sound (Haras)
     Sound shootSound(shootBuffer);
 
-    float soundVolume = 100.0f; // SF variable declaration
-    float musicVolume = 50.0f; // BGM variable dec
-    float shakeIntesity = 2.0f; // Default pixel offset for SI, lowered it for smoother experience
-    float shakeTimer = 0.0f; // Will keep track of duration of active shake
+    float soundVolume = 100.0f; // SF variable declaration (Haras)
+    float musicVolume = 50.0f; // BGM variable dec (Haras)
+    float shakeIntesity = 2.0f; // Default pixel offset for SI, lowered it for smoother experience (Haras)
+    float shakeTimer = 0.0f; // Will keep track of duration of active shake (Haras)
 
-    Music bgMusic;
+    Music bgMusic; // (Haras)
     if (!bgMusic.openFromFile("Assets/bgm.ogg")) {
         return -1;
     }
@@ -688,7 +688,7 @@ int main() {
         if (!changeState){
 
             //required functions for menu
-            //implemented delta-time
+            //implemented delta-time (Haras)
             starfieldBackground(myStars, starBackground, dt);
             // integrated soundvolume and musicvolume variable
             menu_Interaction(window, view, currentState, hoveredIndex,
@@ -697,8 +697,8 @@ int main() {
 
             bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
-            //Making new game option actually start new game, not start from where left off
-            if (changeState) {
+            //Making new game option actually start new game, not start from where left off (Haras)
+            if (changeState) { // (Haras)
                 Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                 activeProjectiles.clear(); //Clears all previous projectiles
                 wavecount = 0; //restart waves
@@ -733,7 +733,7 @@ int main() {
 
 
             // Call player movement with box to prevent excess movement hahahahah suffer players(Bazil)
-            //implemented delta-time
+            //implemented delta-time (Haras)
             handlePlayerMovement(Playersprite, speed, battleBox, dt);
 
             // first phase stuff ugh(Bazil comments here)
@@ -797,10 +797,10 @@ int main() {
 
             // check the collissins of they happen brrrr (Bazil)
             if (collision(activeProjectiles, Playersprite.getPosition())) { 
-                shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume
-                shootSound.play(); // Makes sound effect play when player gets hit
+                shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
+                shootSound.play(); // Makes sound effect play when player gets hit (Haras)
                 Playersprite.setPosition(battleBox.getPosition()); // rn they go to centre, will change later holy(Bazil)
-                shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds
+                shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
             }
 
             // Dialogue box positioning
@@ -810,19 +810,19 @@ int main() {
             speechBubble.setPosition(bossPos + bubbleOffset);
             speech.setPosition(speechBubble.getPosition() + Vector2f(10.0f, 8.0f));
 
-            //SI Code is below this
+            //SI Code is below this (Haras)
             if (shakeTimer > 0.0f) {
                 shakeTimer -= dt;
-                // Below random number generation between positive, negative shakeIntensity
+                // Below random number generation between positive, negative shakeIntensity (Haras)
                 float offsetX = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
                 float offsetY = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
                 view.setCenter({ (width / 2.0f) + offsetX, (height / 2.0f) + offsetY });
             }
             else {
-                // Camera goes back to center when no shake
+                // Camera goes back to center when no shake (Haras)
                 view.setCenter({ width / 2.0f, height / 2.0f });
             }
-            window.setView(view); // This line actually applies teh offset to before drawing happens below
+            window.setView(view); // This line actually applies teh offset to before drawing happens below (Haras)
             // Draw static UI and Box first cuz 
 
             window.clear();
