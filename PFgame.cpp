@@ -149,6 +149,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     else if (hoveredIndex == 1)
                         currentState = GameState::Tutorial; //Tutorial page add textures
                     else if (hoveredIndex == 2) {
+                        previousState = GameState::Playing;
                         currentState = GameState::Playing;  //to main battleField , change state to true so that we switch from menu to action
                         changeState = true ;
                     }
@@ -178,7 +179,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
         //ESC key press , return to previous stage
         if (const auto* keyPressed = event->getIf<Event::KeyPressed>()) {
             if (keyPressed->code == Keyboard::Key::Escape) {
-                if (currentState == GameState::StartMenu || currentState == GameState::Settings) {
+                if (currentState == GameState::StartMenu) {
                     currentState = GameState::Menu;
                 }
                 else if (currentState == GameState::Settings) {
@@ -742,12 +743,14 @@ int main() {
 
             //Making new game option actually start new game, not start from where left off (Haras)
             if (changeState) { // (Haras)
-                Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
-                activeProjectiles.clear(); //Clears all previous projectiles
-                wavecount = 0; //restart waves
-                waveTriggerClock.restart(); //resets attack timings
+                if (previousState != GameState::Paused) {
+                    Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
+                    activeProjectiles.clear(); //Clears all previous projectiles
+                    wavecount = 0; //restart waves
+                    waveTriggerClock.restart(); //resets attack timings
+                    shakeTimer = 0.0f; // resets shakeTimer
+                }
                 frameClock.restart(); //prevent dt jump on first frame
-                shakeTimer = 0.0f; // resets shakeTimer
                 view.setCenter({ width / 2.0f , height / 2.0f }); // snaps back to center
                 window.setView(view); // implements the view
 
@@ -767,6 +770,7 @@ int main() {
 
                         if (keyPressed->scancode == Keyboard::Scancode::Escape) {
                             currentState = GameState::Paused; // 
+                            previousState = GameState::Paused;
                             hoveredIndex = -1;
                             changeState = false ; //a pause menu can be created :
                         }
