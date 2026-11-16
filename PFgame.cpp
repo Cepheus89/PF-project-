@@ -9,7 +9,7 @@
 using namespace std;
 using namespace sf;
 
-enum directions { down, right, up, left }; //according to that one youtube tutorial erm with the leaf thumbnail
+
 
 // Expanded GameState enum
 enum class GameState {
@@ -18,7 +18,8 @@ enum class GameState {
     Tutorial,  // Tutorial screen
     Playing,
     Settings,
-    Paused // (Haras)
+    Paused, // (Haras)
+    Death
 };
 
 struct Star {
@@ -62,13 +63,14 @@ Text createCenteredText(const Font& font, const string& str, unsigned int size, 
 }
 
 // Reusable function to setup any list of menu items centered on screen (800px width center = 400.f)
+
 //this handles the spacing
 
 vector<Text> createMenuItems(const Font& font, const vector<string>& options, float startY = 280.f, float spacing = 65.f, unsigned int fontSize = 30) {
     vector<Text> items;
     //Takes a list of items and places them vertically so they look aligned
-    int rowIndex = 0 ; 
-    
+    int rowIndex = 0 ;
+
     for (const auto& textString : options) {
         Text menuItem(font, textString, fontSize);
         FloatRect bounds = menuItem.getLocalBounds();
@@ -83,12 +85,27 @@ vector<Text> createMenuItems(const Font& font, const vector<string>& options, fl
 }
 
 
+//reduces health bar each time when hit
+void healthBarUpdate(RectangleShape& healthBar )
+{
+    Vector2f currentPosition = healthBar.getSize() ;
+    float hitpoints = currentPosition.x;
+    hitpoints -= 15.f ;
+    healthBar.setSize({hitpoints, 20.0f});
+
+}
+
+
+
+
 // Event polling and hover interaction logic
+//Chnage state = 0 is menu change state 1 is pause change state 2 is playing
 void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
-                      int& hoveredIndex, vector<Text>& mainMenuItems,
+                      int& hoveredIndex, vector<Text>& mainMenuItems,vector<Text>&deathMenuOptions,
                       vector<Text>& startMenuItems, vector<Text>& pauseMenuItems, vector<string>& startOptions,
-                      int& difficultyIndex, const vector<string>& difficulties, const Font& font, bool& changeState, GameState& previousState,
-                      float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval,float& soundVolume, float& musicVolume, float& shakeIntensity) { // (Haras)
+                      int& difficultyIndex, const vector<string>& difficulties, const Font& font, int& changeState, GameState& previousState,
+                      float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval,
+                      float& soundVolume, float& musicVolume, float& shakeIntensity) { // (Haras)
     //Making menu functional for soundvolume and musicvolume and shakeintensity changes (Haras)
     //gets new mouse pixel also works on all types / sizes of the screen
 
@@ -103,9 +120,12 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
         activeMenuItems = &mainMenuItems;   // when in main menu load up the main menu items ;
     else if (currentState == GameState::StartMenu)  //when in sub menu load up the start menu items
         activeMenuItems = &startMenuItems;
+
     else if (currentState == GameState::Paused) {
         activeMenuItems = &pauseMenuItems;
     }
+    else if (currentState== GameState::Death)
+        activeMenuItems = &deathMenuOptions ;
 
 
     // checking all events
@@ -149,20 +169,22 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     else if (hoveredIndex == 1)
                         currentState = GameState::Tutorial; //Tutorial page add textures
                     else if (hoveredIndex == 2) {
+                        //
                         previousState = GameState::Playing;
-                        currentState = GameState::Playing;  //to main battleField , change state to true so that we switch from menu to action
-                        changeState = true ;
+                        currentState = GameState::Playing;  //to main battleField , change state to 2 so that we switch from menu to action
+                        changeState = 2 ;
                     }
                     else if (hoveredIndex == 3)
                         currentState = GameState::Menu;     // take back to main menu
                 }
                 else if (currentState == GameState::Paused) {
                     if (hoveredIndex == 0) {
-                        currentState = GameState::Playing;
-                        changeState = true;
 
+                        currentState = GameState::Playing;
+                        changeState = 2; //Set to 2 which is the Playing state
                     }
                     else if (hoveredIndex == 1) {
+
                         previousState = GameState::Paused;
                         currentState = GameState::Settings;
                     }
@@ -172,6 +194,17 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     else if (hoveredIndex == 3) {
                         window.close();
                     }
+
+                }
+                else if (currentState == GameState::Death) {
+                        if (hoveredIndex==0){
+                            currentState = GameState::Playing ;
+                            changeState = 2 ;
+                        }
+                        else if(hoveredIndex==1)
+                            currentState=GameState::Menu ;
+
+
                 }
             }
         }
@@ -190,12 +223,17 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 }
                 else if (currentState == GameState::Paused) {
                     currentState = GameState::Playing;
-                    changeState = true;
+                    changeState = 2;
                 }
                 //close game if escape pressed in the other screen
                 else if (currentState == GameState::Menu){
                     window.close() ;
                 }
+                else if(currentState == GameState::Death){
+                    previousState = GameState::Menu ;
+                    currentState = GameState::Menu ;
+                }
+
             }
 
             //Making menu functional for soundvolume and musicvolume changes (Haras)
@@ -282,14 +320,26 @@ void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 
 // Rendering all the stuff for menu
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
-               const Text& titleText, const vector<Text>& mainMenuItems,
-               const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity) {
+               const Text& titleText, const vector<Text>& mainMenuItems, vector<Text>&deathMenuItems ,
+               const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
+                RectangleShape& dimBackground) {
     //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras)
-    
-    window.clear(Color(10, 10, 15));
-    
-    //background, draw vertex array 
-    window.draw(starfield);
+
+    if (currentState == GameState::Paused){
+        dimBackground.setFillColor(Color(0,0,0,150)) ;
+        window.draw(dimBackground) ;
+    }
+    else if (currentState == GameState::Death){
+        dimBackground.setFillColor(Color(0,0,0,220)) ;
+        window.draw(dimBackground) ;
+    }
+
+    else{
+        window.clear(Color(10, 10, 15));
+        window.draw(starfield);
+
+    }
+
     if (currentState == GameState::Menu){
         window.draw(titleText);
         //print all items in start menu
@@ -315,8 +365,8 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
         window.draw(title);
         window.draw(body);
     }
-    
-    //remove this and add a paused state ; 
+
+    //remove this and add a paused state ;
     else if (currentState == GameState::Playing) {
         Text playText = createCenteredText(font, "GAMEPLAY SCREEN \n\nDifficulty: " + currentDifficulty + "\n\n(Press ESC for Menu)", 26, {400.f, 300.f}, Color::White);
         window.draw(playText);
@@ -335,13 +385,20 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
         Text settingsText = createCenteredText(font, settingsStr, 22, {400.f, 300.f}, Color::White);
         window.draw(settingsText);
     }
-    //to display everthing ;
-    window.display();
+    else if(currentState==GameState::Death){
+        string deathLine = "WASTED" ;
+        Text deathTitle = createCenteredText(font, deathLine, 60 , {400.f, 190.f}, Color(255,30,30)) ;
+        window.draw(deathTitle) ;
+        for (const auto& item :deathMenuItems ){
+            window.draw(item ) ;
+        }
+    }
+
 }
 
 // Player movement function with box containment (Bazil comments in this function)
 void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShape& battleBox, float dt) { //we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
-    Vector2f pos = playerSprite.getPosition(); //apparently the SFML library already has x and y stored so it doesn't need you to declare them. Cool ig 
+    Vector2f pos = playerSprite.getPosition(); //apparently the SFML library already has x and y stored so it doesn't need you to declare them. Cool ig
     //the movement stuff is self explanatory except one thing which I wrote down
     if (Keyboard::isKeyPressed(Keyboard::Scan::S)) {
         pos.y += speed * dt * 30.0f; //so over here, the tutorial told me that y actually increases as we go down. Be careful of this omg I hate SFML
@@ -389,7 +446,7 @@ void crescent(vector<Projectile>& activeProjectiles, float crescentcentre, float
     int totalBullets = 7;
     float totalSpawnTime = (totalBullets - 1) * spawnInterval;
     for (int i = 0; i < totalBullets; i++) {
-        float step = 1.0f / (totalBullets - 1); 
+        float step = 1.0f / (totalBullets - 1);
         float horizontalshift = -0.5f+(i*step); //shift for each bullet
         float horizontalspawn = crescentcentre+(horizontalshift*180.0f); //basically the spawn position, change the 180 to a higher number to create a bigger spread and vice versa
         float arcDip = (0.25f-(horizontalshift*horizontalshift))*60.0f; //same logic as above one
@@ -445,9 +502,9 @@ void pinwheel(vector<Projectile>& activeProjectiles, Vector2f centerPos, float p
         Projectile proj;
         proj.position = centerPos;
         proj.velocity = dir * (projectileSpeed * 0.75f);
-        proj.isLaunched = false;        
-        proj.launchTimer = 1.0f;       
-        proj.tracksPlayer = false;     
+        proj.isLaunched = false;
+        proj.launchTimer = 1.0f;
+        proj.tracksPlayer = false;
         proj.leavesTrail = false;
         activeProjectiles.push_back(proj);
     }
@@ -461,7 +518,7 @@ void homingdarts(vector<Projectile>& activeProjectiles, const RectangleShape& ba
         Projectile proj;
         float horizontallocation = -60.0f + i * 40.0f; // its basically where the projectile spawns in the horizontal position, -60 being the initial one for the first projectile
         proj.position = {centerX + horizontallocation, battleBox.getPosition().y - boxSize.y / 2.0f - 15.0f}; //initial projectile location
-        proj.isLaunched = false; 
+        proj.isLaunched = false;
         proj.launchTimer = 0.7f + (i * 0.2f); //launched at intervals with i
         proj.tracksPlayer = true;      //well like, duh
         proj.leavesTrail = false; //no trail for this one
@@ -492,19 +549,19 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
             }
         }
         if (!p.isLaunched) { // if its NOT launched
-            p.launchTimer -= t; //subtraction from the launch timer, its also why we subtracted from the spawnDelay above 
+            p.launchTimer -= t; //subtraction from the launch timer, its also why we subtracted from the spawnDelay above
             if (p.launchTimer <= 0.0f) { //has the timer hit 0? let the projectile out the prison :(
                 if (p.tracksPlayer) { //is it gonna home in?
-                    Vector2f direction = {playerPos.x - p.position.x, playerPos.y - p.position.y};  
+                    Vector2f direction = {playerPos.x - p.position.x, playerPos.y - p.position.y};
                     float length = sqrt(direction.x * direction.x + direction.y * direction.y);
                     if (length != 0.0f) {
-                        direction /= length; //to give a unit vector so it doesn't fly at mach speed (unless I change this and decide to troll the players ig) 
+                        direction /= length; //to give a unit vector so it doesn't fly at mach speed (unless I change this and decide to troll the players ig)
                     }
-                    p.velocity = direction * projectileSpeed; 
+                    p.velocity = direction * projectileSpeed;
                 }
                 p.isLaunched = true; //its out of the prison yay
             }
-        } 
+        }
         else { //projectile is launched
             //implemented delta-time (Haras)
             p.position += p.velocity * t * 30.0f; //takes your point and adds the velocity onto it every frame which moves it
@@ -517,7 +574,7 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
                 }
             }
         }
-        // age the trail points 
+        // age the trail points
         for (int j = 0; j < (int)p.trail.size(); ) {
             p.trail[j].lifeTimer -= t;
             if (p.trail[j].lifeTimer <= 0.0f) {
@@ -525,7 +582,7 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
             } else {
                 j++;
             }
-        }   
+        }
         bool isOffScreen = (p.position.y > height + 40 || p.position.y < -40 || p.position.x < -100 || p.position.x > width + 100);
         if (isOffScreen && p.isLaunched) {
             activeProjectiles.erase(activeProjectiles.begin() + i);   //remove the projectile once it goes offscreen, rip my laptop holy lag
@@ -546,7 +603,7 @@ bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos) 
             }
         }
 
-        for (const auto& hazard : proj.trail) { //same thing over here but for the trail 
+        for (const auto& hazard : proj.trail) { //same thing over here but for the trail
             float distX = playerPos.x - hazard.position.x;
             float distY = playerPos.y - hazard.position.y;
             if (sqrt(distX * distX + distY * distY) < 10.0f) {
@@ -564,6 +621,7 @@ int main() {
 
     unsigned int width = 800;
     unsigned int height = 600;
+
     RenderWindow window(VideoMode({ width, height }), "Bullet Requiem");
     window.setFramerateLimit(60); // increased fps from 30 to 60 for smoother gameplay (Haras)
 
@@ -612,6 +670,7 @@ int main() {
 
     //further Work on background
 
+
     // Title text set up centered at x=400, y=120;
     Text titletext(font, "BULLET REQUIEM", 55);
     FloatRect titleBounds = titletext.getLocalBounds();
@@ -620,6 +679,9 @@ int main() {
     titletext.setOrigin({titleBounds.size.x / 2.f, titleBounds.size.y / 2.f});
     titletext.setPosition({400.0f, 120.0f});
 
+    //Further work on Pause screen
+    RectangleShape DimScreen (Vector2f(window.getSize())) ;
+    DimScreen.setFillColor(Color(0,0,0,150));
 
     //Set the current state to menu so that when we enter game we at the menu
     GameState currentState = GameState::Menu;
@@ -644,7 +706,11 @@ int main() {
     vector<Text> startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
 
     vector<string> pauseOptions = { "RESUME", "SETTINGS", "MAIN MENU", "EXIT GAME" };
+    vector<string> deathOptions = {"Restart", "MainMenu" };
+
     vector<Text> pauseMenuItems = createMenuItems(font, pauseOptions, 240.f, 60.f, 26);
+    vector<Text> deathMenuItems = createMenuItems(font, deathOptions, 260.f, 70.f, 30) ;
+
     GameState previousState = GameState::Menu;
 
 
@@ -655,6 +721,21 @@ int main() {
     battleBox.setOutlineThickness(3.0f);
     battleBox.setOrigin({380.0f / 2.0f, 120.0f / 2.0f});
     battleBox.setPosition({width / 2.0f, height / 2.0f + 100.0f});
+
+    //health bar
+    sf::RectangleShape healthBar({300.f , 20.f}) ;
+    healthBar.setOrigin({150.f, 10.f}) ;
+    healthBar.setPosition({200.0f , 30.0f}) ;
+    healthBar.setFillColor(sf::Color(57, 255, 20));
+
+    //health bar boundary and underneath
+    sf::RectangleShape boundaryRect({300.f, 20.f});
+    boundaryRect.setOrigin({150.f,10.f}) ;
+    boundaryRect.setPosition({200.f, 30.f}) ;
+    boundaryRect.setFillColor(sf::Color(190,44 , 35)) ;
+    boundaryRect.setOutlineThickness(4.f);
+    boundaryRect.setOutlineColor(sf::Color(140,90,43));
+
 
     // Boss Sprite Setup
     Sprite Bosssprite(texture3);
@@ -680,10 +761,12 @@ int main() {
     //standard attacks on normal difficulty
     float projectileSpeed = 15.0f ;
     float launchInterval = 0.3f  ;
+
+    //system clocks
     Clock waveTriggerClock;
 
     Clock frameClock;
-    //
+    Clock clock ;
     float waveInterval = 0.8f ;
     int wavecount = 0;
 
@@ -701,8 +784,8 @@ int main() {
 
     //used to change current state of game from menu too playing ;
     //change this and add an endless mode also make it go back to menu if escape pressed during the playing stage
-    bool changeState = false;
-    
+    int changeState = 0 ;
+
     //load SoundBuffer before while window.isOpen loop, so it only loads once (Haras)
     SoundBuffer shootBuffer;
     if (!shootBuffer.loadFromFile("Assets/snd_damage.mp3")) {
@@ -729,26 +812,28 @@ int main() {
         //gets recent mouse position
 
         //this statemet check that if there new games is pressed we change menu too the recent menu and end the previous menu
-        if (!changeState){
+        if (changeState==0){
 
             //required functions for menu
             //implemented delta-time (Haras)
             starfieldBackground(myStars, starBackground, dt);
             // integrated soundvolume and musicvolume variable
             menu_Interaction(window, view, currentState, hoveredIndex,
-                 mainMenuItems, startMenuItems, pauseMenuItems, startOptions,
+                 mainMenuItems,deathMenuItems , startMenuItems, pauseMenuItems, startOptions,
                  difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
 
             bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
             //Making new game option actually start new game, not start from where left off (Haras)
-            if (changeState) { // (Haras)
+            if (changeState==0) { // (Haras)
                 if (previousState != GameState::Paused) {
                     Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                     activeProjectiles.clear(); //Clears all previous projectiles
                     wavecount = 0; //restart waves
                     waveTriggerClock.restart(); //resets attack timings
                     shakeTimer = 0.0f; // resets shakeTimer
+                    healthBar.setSize({300.f,20.f})  ;
+                    healthBar.setFillColor(Color(57,255,20));
                 }
                 frameClock.restart(); //prevent dt jump on first frame
                 view.setCenter({ width / 2.0f , height / 2.0f }); // snaps back to center
@@ -757,128 +842,140 @@ int main() {
             }
             // integrated soundvolume and musicVolume variable
             rendering(window, starBackground, currentState, titletext,
-            mainMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity);
+            mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
+            DimScreen);
+            window.display() ;
 
         }
         else {
-            while (const optional<Event> event = window.pollEvent()) {
-                if (event->is<Event::Closed>()) {
-                    window.close();
-                }
-                else if (const auto* keyPressed = event->getIf<Event::KeyPressed>()) {
-                    //Change this so it shows a black screen as a warning of shutting down
-
-                        if (keyPressed->scancode == Keyboard::Scancode::Escape) {
-                            currentState = GameState::Paused; // 
-                            previousState = GameState::Paused;
-                            hoveredIndex = -1;
-                            changeState = false ; //a pause menu can be created :
-                        }
-
-                }
-            }
+            if(changeState ==2){
+                while (const optional<Event> event = window.pollEvent()) {
+                    if (event->is<Event::Closed>()) {
+                        window.close();
+                    }
+                    else if (const auto* keyPressed = event->getIf<Event::KeyPressed>()) {
 
 
-            // Call player movement with box to prevent excess movement hahahahah suffer players(Bazil)
-            //implemented delta-time (Haras)
-            handlePlayerMovement(Playersprite, speed, battleBox, dt);
+                            if (keyPressed->scancode == Keyboard::Scancode::Escape) {
+                                currentState = GameState::Paused; //
+                                previousState = GameState::Paused;
+                                hoveredIndex = -1;
+                                changeState = 1 ;
+                            }
 
-            // first phase stuff ugh(Bazil comments here)
-            bool nextwave = false;
-            if (wavecount <= 3) { //this is only for the first crescent waves
-                nextwave = allLaunched(activeProjectiles);
-            } 
-            else {
-                nextwave = activeProjectiles.empty();
-            }
-            if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) { //this is to rapid fire waves cuz I mean, im not merciless
-                waveTriggerClock.restart(); //set it to 0 for the next projectile
-                float spawnposition = 220.0f; //
-                float leftX = width * 0.25f;
-                float middleX = width * 0.5f;
-                float rightX = width * 0.75f;
-                if (wavecount == 0) {
-                    crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval); // Crescent Middle
-                }
-                else if (wavecount == 1) {
-                    crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);  // Crescent Right
-                }
-                else if (wavecount == 2) {
-                    crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Crescent Left
-                }
-                else if (wavecount == 3) {
-                    crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Triple Crescent
-                    crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
-                    crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
-                }
-                else if (wavecount == 4) {
-                    horizontal(activeProjectiles, battleBox, projectileSpeed, -45.0f);
-                    horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
-                }
-                else if (wavecount == 5) {
-                    horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
-                    horizontal(activeProjectiles, battleBox, projectileSpeed, 30.0f);
-                }
-                else if (wavecount == 6) {
-                    pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y}, projectileSpeed);
-                }
-                else if (wavecount == 7) {
-                    pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
-                }
-                else if (wavecount == 8) {
-                    pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
-                }
-                else if (wavecount == 9) {
-                    homingdarts(activeProjectiles, battleBox, middleX);
-                }
-                else if (wavecount == 10) {
-                    homingdarts(activeProjectiles, battleBox, rightX);
-                }
-                else if (wavecount == 11) {
-                    homingdarts(activeProjectiles, battleBox, leftX);
+                    }
                 }
 
-                wavecount = (wavecount + 1) % 12; // causing the looping forn now
-            }
-            updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
 
-            // check the collissins of they happen brrrr (Bazil)
-            if (collision(activeProjectiles, Playersprite.getPosition())) { 
-                shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
-                shootSound.play(); // Makes sound effect play when player gets hit (Haras)
-                Playersprite.setPosition(battleBox.getPosition()); // rn they go to centre, will change later holy(Bazil)
-                shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
-            }
 
-            // Dialogue box positioning
-            Vector2f bossPos = Bosssprite.getPosition();
-            Vector2f bubbleOffset(65.0f, -35.0f);
+                // Call player movement with box to prevent excess movement hahahahah suffer players(Bazil)
+                //implemented delta-time (Haras)
+                handlePlayerMovement(Playersprite, speed, battleBox, dt);
 
-            speechBubble.setPosition(bossPos + bubbleOffset);
-            speech.setPosition(speechBubble.getPosition() + Vector2f(10.0f, 8.0f));
+                // first phase stuff ugh(Bazil comments here)
+                bool nextwave = false;
+                if (wavecount <= 3) { //this is only for the first crescent waves
+                    nextwave = allLaunched(activeProjectiles);
+                }
+                else {
+                    nextwave = activeProjectiles.empty();
+                }
+                if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) { //this is to rapid fire waves cuz I mean, im not merciless
+                    waveTriggerClock.restart(); //set it to 0 for the next projectile
+                    float spawnposition = 220.0f; //
+                    float leftX = width * 0.25f;
+                    float middleX = width * 0.5f;
+                    float rightX = width * 0.75f;
+                    if (wavecount == 0) {
+                        crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval); // Crescent Middle
+                    }
+                    else if (wavecount == 1) {
+                        crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);  // Crescent Right
+                    }
+                    else if (wavecount == 2) {
+                        crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Crescent Left
+                    }
+                    else if (wavecount == 3) {
+                        crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Triple Crescent
+                        crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
+                        crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
+                    }
+                    else if (wavecount == 4) {
+                        horizontal(activeProjectiles, battleBox, projectileSpeed, -45.0f);
+                        horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+                    }
+                    else if (wavecount == 5) {
+                        horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+                        horizontal(activeProjectiles, battleBox, projectileSpeed, 30.0f);
+                    }
+                    else if (wavecount == 6) {
+                        pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y}, projectileSpeed);
+                    }
+                    else if (wavecount == 7) {
+                        pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
+                    }
+                    else if (wavecount == 8) {
+                        pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
+                    }
+                    else if (wavecount == 9) {
+                        homingdarts(activeProjectiles, battleBox, middleX);
+                    }
+                    else if (wavecount == 10) {
+                        homingdarts(activeProjectiles, battleBox, rightX);
+                    }
+                    else if (wavecount == 11) {
+                        homingdarts(activeProjectiles, battleBox, leftX);
+                    }
 
-            //SI Code is below this (Haras)
-            if (shakeTimer > 0.0f) {
-                shakeTimer -= dt;
-                // Below random number generation between positive, negative shakeIntensity (Haras)
-                float offsetX = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
-                float offsetY = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
-                view.setCenter({ (width / 2.0f) + offsetX, (height / 2.0f) + offsetY });
-            }
-            else {
-                // Camera goes back to center when no shake (Haras)
-                view.setCenter({ width / 2.0f, height / 2.0f });
+                    wavecount = (wavecount + 1) % 12; // causing the looping forn now
+                }
+                updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
+
+                // check the collissins of they happen brrrr (Bazil)
+                if (collision(activeProjectiles, Playersprite.getPosition())) {
+                    shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
+                    shootSound.play(); // Makes sound effect play when player gets hit (Haras)
+                    healthBarUpdate(healthBar );
+                    shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
+                    if (healthBar.getSize().x <= 0){
+                        changeState = 3 ;
+                        currentState = GameState::Death;
+                    }
+                }
+
+                // Dialogue box positioning
+                Vector2f bossPos = Bosssprite.getPosition();
+                Vector2f bubbleOffset(65.0f, -35.0f);
+
+                speechBubble.setPosition(bossPos + bubbleOffset);
+                speech.setPosition(speechBubble.getPosition() + Vector2f(10.0f, 8.0f));
+
+                //SI Code is below this (Haras)
+                if (shakeTimer > 0.0f) {
+                    shakeTimer -= dt;
+                    // Below random number generation between positive, negative shakeIntensity (Haras)
+                    float offsetX = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
+                    float offsetY = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
+                    view.setCenter({ (width / 2.0f) + offsetX, (height / 2.0f) + offsetY });
+                }
+                else {
+                    // Camera goes back to center when no shake (Haras)
+                    view.setCenter({ width / 2.0f, height / 2.0f });
+                }
             }
             window.setView(view); // This line actually applies teh offset to before drawing happens below (Haras)
-            // Draw static UI and Box first cuz 
+            // Draw static UI and Box first cuz
 
             window.clear();
+            //Work required
 
-          
+            window.draw(boundaryRect) ;
+            window.draw(healthBar) ;
             window.draw(battleBox);
             window.draw(Bosssprite);
             window.draw(speechBubble);
             window.draw(speech);
+
 
             // draw the projectiles with the hazard trail
             for (const auto& proj : activeProjectiles) {
@@ -895,6 +992,50 @@ int main() {
 
             // Draw Player on top
             window.draw(Playersprite);
+
+            if (healthBar.getSize().x <= 135&& healthBar.getSize().x >60 )
+            healthBar.setFillColor(sf::Color(243 , 156 , 18));
+
+            if (healthBar.getSize().x<=60 && healthBar.getSize().x>0){
+                float time = clock.getElapsedTime().asSeconds();
+                float pulse = (sin(time*4.f)+1.2f)/2.f ;
+                healthBar.setFillColor(Color(240,static_cast<int>(180*pulse), 20));
+            }
+
+            if(changeState==1){
+                menu_Interaction(window, view, currentState, hoveredIndex,
+                    mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
+                    difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
+
+                bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
+
+                rendering(window, starBackground, currentState, titletext,
+                    mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
+                    DimScreen);
+
+
+            }
+            if (changeState == 3){
+                Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
+                activeProjectiles.clear(); //Clears all previous projectiles
+                wavecount = 0; //restart waves
+                waveTriggerClock.restart(); //resets attack timings
+                shakeTimer = 0.0f; // resets shakeTimer
+                healthBar.setSize({300.f,20.f});
+                healthBar.setFillColor(Color(57,255,20));
+
+                menu_Interaction(window, view, currentState, hoveredIndex,
+                    mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
+                    difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
+
+                bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
+
+                rendering(window, starBackground, currentState, titletext,
+                    mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
+                    DimScreen);
+
+
+            }
 
             window.display();
             }
