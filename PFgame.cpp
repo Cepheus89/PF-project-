@@ -190,6 +190,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     }
                     else if (hoveredIndex == 2) {
                         currentState = GameState::Menu;
+                        changeState = 0; // (Haras) for game end screen overhaul
                     }
                     else if (hoveredIndex == 3) {
                         window.close();
@@ -201,8 +202,11 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                             currentState = GameState::Playing ;
                             changeState = 2 ;
                         }
-                        else if(hoveredIndex==1)
-                            currentState=GameState::Menu ;
+                        else if (hoveredIndex == 1) {
+                            currentState = GameState::Menu; 
+                            changeState = 0; // (Haras) for game end screen overhaul
+
+                        }
 
 
                 }
@@ -232,6 +236,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 else if(currentState == GameState::Death){
                     previousState = GameState::Menu ;
                     currentState = GameState::Menu ;
+                    changeState = 0; // (Haras) for game end screen overhaul
                 }
 
             }
@@ -275,7 +280,14 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 //resize
                 item.setScale({1.15f, 1.15f});
             } else {
-                item.setFillColor(Color(180, 180, 180));
+                // (Haras) for game end screen overhaul
+                if (currentState == GameState::Death) {
+                    item.setFillColor(indexCounter == 0 ? Color(255, 40, 40) : Color::White);
+                }
+                else {
+                    item.setFillColor(Color(180, 180, 180));
+                }
+                
                 item.setScale({1.0f, 1.0f});
             }
             indexCounter++ ;
@@ -322,16 +334,16 @@ void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
                const Text& titleText, const vector<Text>& mainMenuItems, vector<Text>&deathMenuItems ,
                const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
-                RectangleShape& dimBackground) {
-    //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras)
+                RectangleShape& dimBackground, const Sprite& playerSprite) {
+    //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras),
+    // it has been edited for game end screen overhaul (Haras)
 
     if (currentState == GameState::Paused){
         dimBackground.setFillColor(Color(0,0,0,150)) ;
         window.draw(dimBackground) ;
     }
     else if (currentState == GameState::Death){
-        dimBackground.setFillColor(Color(0,0,0,220)) ;
-        window.draw(dimBackground) ;
+        window.clear(Color::Black); // game end screen overhaul
     }
 
     else{
@@ -385,13 +397,93 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
         Text settingsText = createCenteredText(font, settingsStr, 22, {400.f, 300.f}, Color::White);
         window.draw(settingsText);
     }
-    else if(currentState==GameState::Death){
-        string deathLine = "WASTED" ;
-        Text deathTitle = createCenteredText(font, deathLine, 60 , {400.f, 190.f}, Color(255,30,30)) ;
-        window.draw(deathTitle) ;
-        for (const auto& item :deathMenuItems ){
-            window.draw(item ) ;
+    else if (currentState == GameState::Death) { // game end screen overhaul (Haras)
+        // central spotlight implemented here (Haras)
+        float beamtop = 140.f, beamheight = 305.f;
+        RectangleShape beamouter({ 190.f, beamheight });
+        beamouter.setOrigin({ 95.f, 0.f });
+        beamouter.setPosition({ 400.f, beamtop });
+        beamouter.setFillColor(Color(30, 8, 14));
+        window.draw(beamouter);
+
+        RectangleShape beammid({ 136.f, beamheight });
+        beammid.setOrigin({ 68.f, 0.f });
+        beammid.setPosition({ 400.f, beamtop });
+        beammid.setFillColor(Color(44, 12, 20));
+        window.draw(beammid);
+
+        RectangleShape beaminner({ 82.f, beamheight });
+        beaminner.setOrigin({ 41.f, 0.f });
+        beaminner.setPosition({ 400.f, beamtop });
+        beaminner.setFillColor(Color(58, 16, 26));
+        window.draw(beaminner);
+
+        // floor of spotlight and drop shadow (Haras)
+        CircleShape padouter(95.f, 60);
+        padouter.setOrigin({ 95.f, 95.f });
+        padouter.setPosition({ 400.f, 445.f });
+        padouter.setScale({ 1.0f, 0.38f });
+        padouter.setFillColor(Color(90, 30, 44));
+        window.draw(padouter);
+
+        CircleShape padinner(70.f, 60);
+        padinner.setOrigin({ 70.f, 70.f });
+        padinner.setPosition({ 400.f, 445.f });
+        padinner.setScale({ 1.0f, 0.38f });
+        padinner.setFillColor(Color(110, 38, 54));
+        window.draw(padinner);
+
+        CircleShape heartShadow(20.f, 30);
+        heartShadow.setOrigin({ 20.f, 20.f });
+        heartShadow.setPosition({ 400.f, 453.f });
+        heartShadow.setScale({ 1.0f, 0.35f });
+        heartShadow.setFillColor(Color(40, 10, 18));
+        window.draw(heartShadow);
+
+        // player sprite on the spotlight stage (Haras)
+        Sprite centerheart = playerSprite;
+        centerheart.setScale({ 0.14f, 0.14f });
+        centerheart.setPosition({ 400.f, 435.f });
+        window.draw(centerheart);
+        // game over and try again display (Haras)
+        Text gameword = createCenteredText(font, "GAME", 78, { 400.f,105.f }, Color::White);
+        gameword.setStyle(Text::Bold);
+        gameword.setScale({ 1.2f, 1.0f });
+        window.draw(gameword);
+        Text overword = createCenteredText(font, "OVER", 78, { 400.f,195.f }, Color(255,40,40));
+        overword.setStyle(Text::Bold);
+        overword.setScale({ 1.2f, 1.0f });
+        window.draw(overword);
+        // encourage trying again (Haras)
+        Text tryagain = createCenteredText(font, "Try Again?...", 22, { 400.f,305.f }, Color::White);
+        window.draw(tryagain);
+        //making the buttons aesthetically pretty (Haras)
+        float buttoncentersX[2] = { 185.f, 615.f };
+        float lineyoffsets[2] = { 440.f, 490.f };
+        for (float cx : buttoncentersX) {
+
+
+            for (float ly : lineyoffsets) {
+                RectangleShape dotL({ 3.f, 2.f }); dotL.setPosition({ cx - 88.f, ly });
+
+                RectangleShape dashL({ 10.f, 2.f }); dashL.setPosition({ cx - 78.f, ly });
+                RectangleShape midBar({ 116.f, 2.f }); midBar.setPosition({ cx - 58.f, ly });
+                RectangleShape dashR({ 10.f, 2.f }); dashR.setPosition({ cx + 68.f, ly });
+                RectangleShape dotR({ 3.f, 2.f }); dotR.setPosition({ cx + 85.f, ly });
+
+                window.draw(dotL); window.draw(dashL); window.draw(midBar); window.draw(dashR); window.draw(dotR);
+
+            }
         }
+
+
+
+
+
+        for (const auto& item : deathMenuItems) {
+            window.draw(item);
+        }
+      
     }
 
 }
@@ -706,11 +798,14 @@ int main() {
     vector<Text> startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
 
     vector<string> pauseOptions = { "RESUME", "SETTINGS", "MAIN MENU", "EXIT GAME" };
-    vector<string> deathOptions = {"Restart", "MainMenu" };
-
     vector<Text> pauseMenuItems = createMenuItems(font, pauseOptions, 240.f, 60.f, 26);
-    vector<Text> deathMenuItems = createMenuItems(font, deathOptions, 260.f, 70.f, 30) ;
+    // for game end menu overhaul (Haras)
+    vector<Text> deathMenuItems = {
 
+
+        createCenteredText(font, "PERSEVERE", 22,{ 185.f, 465.f }, Color(255,40,40)),
+        createCenteredText(font, "GIVE UP", 22,{ 615.f, 465.f }, Color::White)
+    };
     GameState previousState = GameState::Menu;
 
 
@@ -809,10 +904,11 @@ int main() {
 
     while (window.isOpen()) {
         float dt = frameClock.restart().asSeconds();
-        //gets recent mouse position
+        starfieldBackground(myStars, starBackground, dt); // snowfall animation always plays in main menu (Haras)
 
+        //gets recent mouse position
         //this statemet check that if there new games is pressed we change menu too the recent menu and end the previous menu
-        if (changeState==0){
+        if (changeState==0 || changeState==3){ // for game end menu overhall (Haras)
 
             //required functions for menu
             //implemented delta-time (Haras)
@@ -825,7 +921,7 @@ int main() {
             bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
             //Making new game option actually start new game, not start from where left off (Haras)
-            if (changeState==0) { // (Haras)
+            if (changeState==0 || changeState==3) { // Also added for death menu so shake not apply to it (Haras)
                 if (previousState != GameState::Paused) {
                     Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                     activeProjectiles.clear(); //Clears all previous projectiles
@@ -843,7 +939,7 @@ int main() {
             // integrated soundvolume and musicVolume variable
             rendering(window, starBackground, currentState, titletext,
             mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-            DimScreen);
+            DimScreen, Playersprite);
             window.display() ;
 
         }
@@ -968,7 +1064,7 @@ int main() {
 
             window.clear();
             //Work required
-
+      
             window.draw(boundaryRect) ;
             window.draw(healthBar) ;
             window.draw(battleBox);
@@ -1011,7 +1107,7 @@ int main() {
 
                 rendering(window, starBackground, currentState, titletext,
                     mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-                    DimScreen);
+                    DimScreen, Playersprite);
 
 
             }
@@ -1024,15 +1120,11 @@ int main() {
                 healthBar.setSize({300.f,20.f});
                 healthBar.setFillColor(Color(57,255,20));
 
-                menu_Interaction(window, view, currentState, hoveredIndex,
-                    mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
-                    difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
+              
 
                 bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
-                rendering(window, starBackground, currentState, titletext,
-                    mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-                    DimScreen);
+             
 
 
             }
