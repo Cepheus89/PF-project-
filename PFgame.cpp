@@ -48,6 +48,8 @@ struct Projectile {
     bool leavesTrail = false;//basically whether the projectiles leave the dangerous trail or not (Bazil)
     bool tracksPlayer = true; //many of the projectiles I use are homing, ill set this to true if I want homing projectiles and False if I don't(Bazil)
     float spawnDelay = 0.0f;
+    float hitBox = 10.f ;
+    float rotation = 0.0f ; //This is required for the falling crystals ;
 };
 
 
@@ -162,9 +164,9 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                         startOptions[0] = "DIFFICULTY: " + difficulties[difficultyIndex];
                         startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
                         //changing stats based on difficulty ;
-                        projectileSpeed = 15.0f + 3.0f * (difficultyIndex-1) ;
+                        projectileSpeed = 20.0f + 5.0f * (difficultyIndex-1) ;
                         launchInterval = 0.3 -0.1 *(difficultyIndex -1) ;
-                        waveInterval = 0.8f - 0.1f * (difficultyIndex-1) ;
+                        waveInterval = 0.8f - 0.2f * (difficultyIndex-1) ;
                     }
                     else if (hoveredIndex == 1)
                         currentState = GameState::Tutorial; //Tutorial page add textures
@@ -203,7 +205,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                             changeState = 2 ;
                         }
                         else if (hoveredIndex == 1) {
-                            currentState = GameState::Menu; 
+                            currentState = GameState::Menu;
                             changeState = 0; // (Haras) for game end screen overhaul
 
                         }
@@ -287,7 +289,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 else {
                     item.setFillColor(Color(180, 180, 180));
                 }
-                
+
                 item.setScale({1.0f, 1.0f});
             }
             indexCounter++ ;
@@ -331,6 +333,7 @@ void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 
 
 // Rendering all the stuff for menu
+//remove the stuff from here like the death rectangle bring it in main so it can be used in other functions
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
                const Text& titleText, const vector<Text>& mainMenuItems, vector<Text>&deathMenuItems ,
                const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
@@ -483,7 +486,7 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
         for (const auto& item : deathMenuItems) {
             window.draw(item);
         }
-      
+
     }
 
 }
@@ -530,6 +533,55 @@ void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShap
     //ok so basically I wanted to do the Undertale box thing where the player is trapped inside a box. Initially my logic included that if my sprites position and the box line position was the same
     //(next line)then the player position would be set to the box position. But I noticed that the half the heart was actually clipping through, so I added a 12 pt barrier which was too large and then
     //(next line) so I experimented a bit and found that 8 was a good value
+}
+
+
+//New fuunction for attack
+//attack spawns at te top and slowly comes down
+void verticle(vector<Projectile>& pillars,float xposition, int difficultyIndex)
+{
+    //created a new varible of type projectile assign it its attrigbutes position updated in update projectile function
+    Projectile magic ;
+    //-ev position so it seems they spawn
+    magic.position={xposition, -150.f} ;
+    //difficulty changes speed
+    magic.velocity={0.0f, 12.f+5*(difficultyIndex-1)} ;
+    magic.isLaunched=true ;
+    magic.tracksPlayer = false ;
+    magic.leavesTrail = false ;
+    magic.hitBox = 50.f ;
+    pillars.push_back(magic) ;
+
+
+}
+
+
+void burst(vector<Projectile>& machineGun, int difficultyIndex, Vector2f bossPos, float launchInterval){
+    //creating 20 randomly created crystals to remove predictability
+    for (int i =0; i <15 +5*(difficultyIndex-1) ; i++){
+        //new projectile to push to vector
+        Projectile crystal ;
+        crystal.position = bossPos ;
+        crystal.isLaunched = true ;
+        crystal.leavesTrail = false ;
+        crystal.tracksPlayer = false ;
+        crystal.hitBox = 15.0 ;
+        //so it doesnt shoot al at once
+        crystal.spawnDelay = i* launchInterval/5.f ;
+        //random speeds and angle
+
+        float angle ;
+        angle = 28.f + rand()%125 ;
+        crystal.rotation= angle- 90 ;
+        float speed ;
+        speed = 5.0f + rand()%5 +3.f*(difficultyIndex -1);
+        angle = angle * 3.14157f/180.0 ;
+        crystal.velocity ={speed *cos(angle), speed*sin(angle)};
+        //new element
+        machineGun.push_back(crystal);
+
+
+    }
 }
 
 // The first wave stuff, crescent bullets (Bazil comments in this function)
@@ -617,6 +669,7 @@ void homingdarts(vector<Projectile>& activeProjectiles, const RectangleShape& ba
         activeProjectiles.push_back(proj);
     }
 }
+
 //this is to check if the projectiles of the wave have launched because without this, my first crescent had just started firing and the next one would start spawning like holy(Bazil)
 bool allLaunched(const vector<Projectile>& activeProjectiles) {
     for (const auto& proj : activeProjectiles) {
@@ -675,7 +728,7 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
                 j++;
             }
         }
-        bool isOffScreen = (p.position.y > height + 40 || p.position.y < -40 || p.position.x < -100 || p.position.x > width + 100);
+        bool isOffScreen = (p.position.y > height + 40 || p.position.y < -200 || p.position.x < -100 || p.position.x > width + 100);
         if (isOffScreen && p.isLaunched) {
             activeProjectiles.erase(activeProjectiles.begin() + i);   //remove the projectile once it goes offscreen, rip my laptop holy lag
         } else {
@@ -690,15 +743,16 @@ bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos) 
         if (proj.isLaunched) { //well like, yeah. It should only run if its launched
             float distX = playerPos.x - proj.position.x; //basically the horizontal distance between the projectile and the player
             float distY = playerPos.y - proj.position.y; //same thing but vertical
-            if (sqrt(distX * distX + distY * distY) < 10.0f) { //pythagoras theorem shEEEESh
+            if (sqrt(distX * distX + distY * distY) < proj.hitBox) { //pythagoras theorem shEEEESh
                 return true;
             }
         }
 
         for (const auto& hazard : proj.trail) { //same thing over here but for the trail
+
             float distX = playerPos.x - hazard.position.x;
             float distY = playerPos.y - hazard.position.y;
-            if (sqrt(distX * distX + distY * distY) < 10.0f) {
+            if (sqrt(distX * distX + distY * distY) < proj.hitBox) {
                 return true;
             }
         }
@@ -818,13 +872,13 @@ int main() {
     battleBox.setPosition({width / 2.0f, height / 2.0f + 100.0f});
 
     //health bar
-    sf::RectangleShape healthBar({300.f , 20.f}) ;
+    RectangleShape healthBar({300.f , 20.f}) ;
     healthBar.setOrigin({150.f, 10.f}) ;
     healthBar.setPosition({200.0f , 30.0f}) ;
     healthBar.setFillColor(sf::Color(57, 255, 20));
 
     //health bar boundary and underneath
-    sf::RectangleShape boundaryRect({300.f, 20.f});
+    RectangleShape boundaryRect({300.f, 20.f});
     boundaryRect.setOrigin({150.f,10.f}) ;
     boundaryRect.setPosition({200.f, 30.f}) ;
     boundaryRect.setFillColor(sf::Color(190,44 , 35)) ;
@@ -839,6 +893,31 @@ int main() {
     Bosssprite.setOrigin({bossbounds.size.x / 2.f, bossbounds.size.y / 2.f});
     Bosssprite.setPosition({width / 2.0f, 240.0f });
 
+    //Texture magic/ new projectile;
+    Texture magic ;
+    magic.loadFromFile("Assets/Magic atack.png");
+
+    Sprite MagicAttack(magic);
+
+    MagicAttack.setTexture(magic);
+    MagicAttack.setScale({5.f,5.f});
+    Vector2u proj2size = magic.getSize() ;
+    MagicAttack.setOrigin({proj2size.x/2.0f,proj2size.y/2.0f}) ;
+    MagicAttack.setPosition({200.f,300.f});
+
+    //Crystal Projectile that will be fired like a machine gun randomly
+    Texture crystal ;
+    crystal.loadFromFile("Assets/fallingCrystal.png") ;
+    if(!crystal.loadFromFile("Assets/fallingCrystal.png"))
+        return -1 ;
+
+    Sprite fallingCrystal(crystal) ;
+    fallingCrystal.setTexture(crystal);
+    fallingCrystal.setScale({1.f,1.f});
+    Vector2u proj3size = crystal.getSize() ;
+    fallingCrystal.setOrigin({proj3size.x/2.0f,proj3size.y/2.0f}) ;
+
+
     // Player Sprite Setup
     Sprite Playersprite(texture);
     FloatRect playerbounds = Playersprite.getLocalBounds();
@@ -848,20 +927,35 @@ int main() {
 
     //standard speed
 
-    float speed = 5.0f ;
+    float speed = 7.0f ;
 
     // Projectile & Wave Setup
 
     vector<Projectile> activeProjectiles;
     //standard attacks on normal difficulty
-    float projectileSpeed = 15.0f ;
+
+    //New projectile class created with different stats
+    vector<Projectile> magicPillar ;
+
+    vector <Projectile> crystalBurst ;
+
+    //Change this
+    float projectileSpeed = 20.0f ;
     float launchInterval = 0.3f  ;
+
 
     //system clocks
     Clock waveTriggerClock;
 
     Clock frameClock;
     Clock clock ;
+
+    Clock magicTimer ;
+    //for falling crystal
+    Clock burstTimer;
+
+    float burstDelay = 10.0f ;
+
     float waveInterval = 0.8f ;
     int wavecount = 0;
 
@@ -930,6 +1024,10 @@ int main() {
                     shakeTimer = 0.0f; // resets shakeTimer
                     healthBar.setSize({300.f,20.f})  ;
                     healthBar.setFillColor(Color(57,255,20));
+                    magicTimer.restart() ;
+                    burstTimer.restart() ;
+                    magicPillar.clear() ;
+                    crystalBurst.clear();
                 }
                 frameClock.restart(); //prevent dt jump on first frame
                 view.setCenter({ width / 2.0f , height / 2.0f }); // snaps back to center
@@ -997,15 +1095,18 @@ int main() {
                         crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
                     }
                     else if (wavecount == 4) {
-                        horizontal(activeProjectiles, battleBox, projectileSpeed, -45.0f);
-                        horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
+
+                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, -45.0f);
+                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, 0.0f);
                     }
                     else if (wavecount == 5) {
-                        horizontal(activeProjectiles, battleBox, projectileSpeed, 0.0f);
-                        horizontal(activeProjectiles, battleBox, projectileSpeed, 30.0f);
+                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, 0.0f);
+                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, 30.0f);
                     }
                     else if (wavecount == 6) {
-                        pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y}, projectileSpeed);
+                        pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y+50}, projectileSpeed);
+                        pinwheel(activeProjectiles, {rightX - 50.f, battleBox.getPosition().y-50}, projectileSpeed);
+                        pinwheel(activeProjectiles, {leftX + 50.f, battleBox.getPosition().y-50}, projectileSpeed);
                     }
                     else if (wavecount == 7) {
                         pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
@@ -1023,12 +1124,34 @@ int main() {
                         homingdarts(activeProjectiles, battleBox, leftX);
                     }
 
-                    wavecount = (wavecount + 1) % 12; // causing the looping forn now
+                    wavecount = (wavecount + 1) % 12; // causing the looping for now
                 }
+
+                if (magicTimer.getElapsedTime().asSeconds()>=3.0f-(difficultyIndex))
+                {
+                    //Spawn on random sides of the map :
+                    float randomX= static_cast<float>(rand()%400+220);
+                    verticle(magicPillar,randomX,difficultyIndex) ;
+                    magicTimer.restart();
+                }
+                if (burstTimer.getElapsedTime().asSeconds()>=burstDelay){
+                    //burst loading
+                    burst(crystalBurst,difficultyIndex,Bosssprite.getPosition(),launchInterval);
+                    //creates random BUrst interval from 1 - 9 seconds
+                    burstDelay = 1.f + rand()%900/100.f ;
+
+                    burstTimer.restart();
+
+                }
+
+                //update the projectiles
+                updateProjectiles(crystalBurst, dt, width , height , Playersprite.getPosition(),10.f) ;
+                updateProjectiles(magicPillar, dt, width , height , Playersprite.getPosition(), 10.f);
                 updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
 
                 // check the collissins of they happen brrrr (Bazil)
-                if (collision(activeProjectiles, Playersprite.getPosition())) {
+                if (collision(activeProjectiles, Playersprite.getPosition()) || collision(magicPillar,Playersprite.getPosition()) ||
+                    collision(crystalBurst, Playersprite.getPosition())) {
                     shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
                     shootSound.play(); // Makes sound effect play when player gets hit (Haras)
                     healthBarUpdate(healthBar );
@@ -1064,7 +1187,7 @@ int main() {
 
             window.clear();
             //Work required
-      
+
             window.draw(boundaryRect) ;
             window.draw(healthBar) ;
             window.draw(battleBox);
@@ -1074,6 +1197,20 @@ int main() {
 
 
             // draw the projectiles with the hazard trail
+            for(const auto& pillar: magicPillar){
+                MagicAttack.setPosition(pillar.position);
+                window.draw(MagicAttack);
+            }
+
+            for (const auto& newCrystal :crystalBurst)
+            {
+                if(newCrystal.spawnDelay <= 0.0f){
+                    fallingCrystal.setPosition(newCrystal.position);
+                    fallingCrystal.setRotation(degrees(newCrystal.rotation)) ;
+                    window.draw(fallingCrystal);
+                }
+            }
+
             for (const auto& proj : activeProjectiles) {
                 for (const auto& hazard : proj.trail) {
                     hazardDot.setPosition(hazard.position);
@@ -1115,16 +1252,20 @@ int main() {
                 Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                 activeProjectiles.clear(); //Clears all previous projectiles
                 wavecount = 0; //restart waves
+                magicTimer.restart() ;
                 waveTriggerClock.restart(); //resets attack timings
+                burstTimer.restart();
+                crystalBurst.clear();
+                magicPillar.clear() ;
                 shakeTimer = 0.0f; // resets shakeTimer
                 healthBar.setSize({300.f,20.f});
                 healthBar.setFillColor(Color(57,255,20));
 
-              
+
 
                 bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
-             
+
 
 
             }
