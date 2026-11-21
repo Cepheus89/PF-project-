@@ -257,7 +257,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     musicVolume = min(100.0f, musicVolume + 10.0f); //Increase BGM by 10. Cannot go above 100
                 }
                 else if (keyPressed->code == Keyboard::Key::Down) {
-                    musicVolume = min(100.0f, musicVolume - 10.0f); //Decrease BGM by 10. Cannot go below zero
+                    musicVolume = max(0.0f, musicVolume - 10.0f); //Decrease BGM by 10. Cannot go below zero
                 }
                 // For screen shake upon collision intensity (Haras)
                 else if (keyPressed->code == Keyboard::Key::W) {
@@ -492,7 +492,7 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
 }
 
 // Player movement function with box containment (Bazil comments in this function)
-void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShape& battleBox, float dt) { //we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
+void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShape& battleBox, float dt, bool useBox) { //we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
     Vector2f pos = playerSprite.getPosition(); //apparently the SFML library already has x and y stored so it doesn't need you to declare them. Cool ig
     //the movement stuff is self explanatory except one thing which I wrote down
     if (Keyboard::isKeyPressed(Keyboard::Scan::S)) {
@@ -516,6 +516,13 @@ void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShap
     float right = boxPosition.x + (boxSize.x / 2.0f) - 8.0f;
     float top = boxPosition.y - (boxSize.y / 2.0f) + 8.0f;
     float bottom = boxPosition.y + (boxSize.y / 2.0f) - 8.0f;
+    if (!useBox) {
+        // for phase 2 cuz we gotta allow player to move whereever fr
+        left = 8.0f;
+        right = 800.0f - 8.0f;
+        top = 8.0f;
+        bottom = 600.0f - 8.0f;
+    }
 
     if (pos.x < left) {
         pos.x = left;
@@ -737,6 +744,20 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
     }
 }
 
+// Map collisions go brrrrrrrrrrr heahehaheahehaheha
+bool mapcollission(const sf::Image &mapimage, const sf::Sprite &mapsprite, Vector2f playerpos) {
+    Vector2f mapposition = mapsprite.getPosition();                      // map centre
+    sf::Vector2u imagesize = mapimage.getSize();                         // map size
+    int pixelx = (playerpos.x - mapposition.x) / mapsprite.getScale().x; // player positnon with respect to x cuz yeah
+    int pixely = (playerpos.y - mapposition.y) / mapsprite.getScale().y; // player positnon with respect to y cuz yeah
+    if (pixelx < 0 || pixelx >= (int)imagesize.x || pixely < 0 || pixely >= (int)imagesize.y) {
+        return true;
+    }
+    Color pixelcolour = mapimage.getPixel({static_cast<unsigned int>(pixelx), static_cast<unsigned int>(pixely)});
+    bool stonePath = (pixelcolour.r < 200 && pixelcolour.b > 50);
+    return !stonePath;
+}
+
 // For the collisions with projectiles logic here we go brrrrrrrrrrrr (Bazil comments in this function)
 bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos) {
     for (const auto& proj : activeProjectiles) {
@@ -797,7 +818,7 @@ int main() {
     //resize this pls
     if (!texture2.loadFromFile("Assets/frostattack.png")) {
         return -1;
-}
+    }
     Texture texture3;
     if (!texture3.loadFromFile("Assets/Bosssprite.png")) {
         return -1;
@@ -874,7 +895,7 @@ int main() {
     //health bar
     RectangleShape healthBar({300.f , 20.f}) ;
     healthBar.setOrigin({150.f, 10.f}) ;
-    healthBar.setPosition({200.0f , 30.0f}) ;
+    healthBar.setPosition({200.0f , 30.f}) ;
     healthBar.setFillColor(sf::Color(57, 255, 20));
 
     //health bar boundary and underneath
@@ -895,7 +916,9 @@ int main() {
 
     //Texture magic/ new projectile;
     Texture magic ;
-    magic.loadFromFile("Assets/Magic atack.png");
+    if (!magic.loadFromFile("Assets/Magic atack.png")) {
+        return -1;
+    }
 
     Sprite MagicAttack(magic);
 
@@ -907,7 +930,6 @@ int main() {
 
     //Crystal Projectile that will be fired like a machine gun randomly
     Texture crystal ;
-    crystal.loadFromFile("Assets/fallingCrystal.png") ;
     if(!crystal.loadFromFile("Assets/fallingCrystal.png"))
         return -1 ;
 
@@ -958,12 +980,76 @@ int main() {
 
     float waveInterval = 0.8f ;
     int wavecount = 0;
+    int currentphase = 1;     // the phase we're at, duh
+    float invulnerabilitytimer = 0.0f; // invincibility frames cuz im generous :)
 
     // Projectile sprite template
     Sprite projSprite(texture2);
     FloatRect projBounds = projSprite.getLocalBounds();
     projSprite.setScale({0.8f, 0.8f});
     projSprite.setOrigin({projBounds.size.x / 2.f, projBounds.size.y / 2.f});
+
+    // The Map texture yayyy 2nd phase woohoo
+    vector<string> mapFiles = {
+        "Assets/map_track.png",
+        "Assets/map_track2.png",
+        "Assets/map_track3.png"
+    };
+    vector<Texture> mapTextures(mapFiles.size()); //store the textures in a vector (THIS IS SO COOL)
+    vector<sf::Image> mapImages(mapFiles.size()); //need the images too for the pixels
+    for (size_t i = 0; i < mapFiles.size(); i++) {
+        if (!mapTextures[i].loadFromFile(mapFiles[i]) || !mapImages[i].loadFromFile(mapFiles[i])) { //loading each texture, outputting an error if it doesn't happen
+            return -1;
+        }
+    }
+
+    int mapindex = 0; //to cycle between the maps
+    float mapbiggie = 1.4f; //map was too small when I initially used it soo yayy
+    Sprite mapsprite(mapTextures[0]); //
+    mapsprite.setScale({mapbiggie, mapbiggie}); //heh, just scaling 
+
+    float halfwidth = mapTextures[2].getSize().x * 0.5f; //for map3 cuz it wasn't detecting the endpoint at the end of map 3
+
+    vector<float> starter = { 
+        390.f, //for the first map
+        mapTextures[1].getSize().x * 0.5f, //2nd map
+        halfwidth //3rd map
+    };
+
+    vector<Vector2f> finishline = {
+        {45.f, 115.f}, //first map
+        {mapTextures[1].getSize().x * 0.305f, mapTextures[1].getSize().y * 0.055f},// 2nd map
+        {halfwidth, mapTextures[2].getSize().y * 0.065f} //3rd map
+    };
+
+    auto placemapstart = [&]() { //this is a function notation for when you wanna use functions in main. the & allows it to use all variables declared above it as referecne. omg tis so cool :3
+        mapsprite.setTexture(mapTextures[mapindex], true);
+        float texWidth = static_cast<float>(mapTextures[mapindex].getSize().x); //finds the pixel width of the map
+        mapbiggie = static_cast<float>(width) / texWidth; //divides the screen width by pixel width
+        mapsprite.setScale({mapbiggie, mapbiggie}); //makes sure the zooming in doesn't cut parts of the map out dyring scaling
+        float mapheight = mapsprite.getGlobalBounds().size.y; 
+        mapsprite.setPosition({0.0f, height - mapheight}); //put the rest of the map above the screen
+    };
+
+    auto playerspawnmap = [&]() {
+        placemapstart();
+        Playersprite.setPosition({mapsprite.getPosition().x + starter[mapindex] * mapbiggie, height - 50.0f});
+    };
+
+    auto resetToPhase1 = [&]() {
+        Playersprite.setPosition(battleBox.getPosition());
+        activeProjectiles.clear();
+        magicPillar.clear();
+        crystalBurst.clear();
+        wavecount = 0;
+        currentphase = 1;
+        mapindex = 0;
+        invulnerabilitytimer = 0.0f;
+        placemapstart();
+        waveTriggerClock.restart();
+        magicTimer.restart();
+        burstTimer.restart();
+    };
 
     // Hazard trail dot shape
     //Use the created flame sprite / texture pack here
@@ -1020,12 +1106,17 @@ int main() {
                     Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                     activeProjectiles.clear(); //Clears all previous projectiles
                     wavecount = 0; //restart waves
+                    currentphase = 1; // back to phase 1 cuz yes
+                    mapindex = 0;
+                    invulnerabilitytimer = 0.0f; // no leftover invunerability frames cuz I can't have the players getting too comfy
+                    placemapstart(); // map back to start (bottom of the map on the bottom of the screen)
                     waveTriggerClock.restart(); //resets attack timings
                     shakeTimer = 0.0f; // resets shakeTimer
                     healthBar.setSize({300.f,20.f})  ;
                     healthBar.setFillColor(Color(57,255,20));
                     magicTimer.restart() ;
                     burstTimer.restart() ;
+                    burstDelay = 10.0f ;
                     magicPillar.clear() ;
                     crystalBurst.clear();
                 }
@@ -1064,84 +1155,128 @@ int main() {
 
                 // Call player movement with box to prevent excess movement hahahahah suffer players(Bazil)
                 //implemented delta-time (Haras)
-                handlePlayerMovement(Playersprite, speed, battleBox, dt);
+                handlePlayerMovement(Playersprite, currentphase == 2 ? speed * 0.9f : speed, battleBox, dt, currentphase == 1);
+
+                // the speed of the map scroll cuz, yeah
+                float mapscrollspeed = 40.0f;
+                if (currentphase == 2) //must ONLY happen in the 2nd wave
+                {
+                    //the following code is cuz omg I didn't include this and the map scrolled off the screen AND IT CONSIDERED IT OUT OF BOUNDS AND I WAS DYING AAAA
+                    mapsprite.move({0.0f, mapscrollspeed * dt});
+                    if (mapsprite.getPosition().y > 0.0f)
+                    {
+                        mapsprite.setPosition({mapsprite.getPosition().x, 0.0f});
+                    }
+
+                    if (mapsprite.getPosition().y >= 0.0f)
+                    {
+                        //this is for us reaching the endpoint cuz I mean we gotta be able to move on to the next one I suppose
+                        Vector2f endpoint = mapsprite.getPosition() + (finishline[mapindex] * mapbiggie);
+                        Vector2f diff = Playersprite.getPosition() - endpoint;
+                        if (sqrt(diff.x * diff.x + diff.y * diff.y) < 55.0f)
+                        {
+                            mapindex++;
+                            if (mapindex < (int)mapTextures.size())
+                            {
+                                invulnerabilitytimer = 1.0f;
+                                playerspawnmap();
+                            }
+                            else
+                            {
+                                resetToPhase1();
+                            }
+                        }
+                    }
+                }
 
                 // first phase stuff ugh(Bazil comments here)
-                bool nextwave = false;
-                if (wavecount <= 3) { //this is only for the first crescent waves
-                    nextwave = allLaunched(activeProjectiles);
-                }
-                else {
-                    nextwave = activeProjectiles.empty();
-                }
-                if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) { //this is to rapid fire waves cuz I mean, im not merciless
-                    waveTriggerClock.restart(); //set it to 0 for the next projectile
-                    float spawnposition = 220.0f; //
-                    float leftX = width * 0.25f;
-                    float middleX = width * 0.5f;
-                    float rightX = width * 0.75f;
-                    if (wavecount == 0) {
-                        crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval); // Crescent Middle
+                if (currentphase == 1) {
+                    bool nextwave = false;
+                    if (wavecount <= 3) { //this is only for the first crescent waves
+                        nextwave = allLaunched(activeProjectiles);
                     }
-                    else if (wavecount == 1) {
-                        crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);  // Crescent Right
+                    else {
+                        nextwave = activeProjectiles.empty();
                     }
-                    else if (wavecount == 2) {
-                        crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Crescent Left
-                    }
-                    else if (wavecount == 3) {
-                        crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Triple Crescent
-                        crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
-                        crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
-                    }
-                    else if (wavecount == 4) {
+                    if (waveTriggerClock.getElapsedTime().asSeconds() >= waveInterval && nextwave) { //this is to rapid fire waves cuz I mean, im not merciless
+                        waveTriggerClock.restart(); //set it to 0 for the next projectile
+                        float spawnposition = 220.0f; //
+                        float leftX = width * 0.25f;
+                        float middleX = width * 0.5f;
+                        float rightX = width * 0.75f;
+                        if (wavecount == 0) {
+                            crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval); // Crescent Middle
+                        }
+                        else if (wavecount == 1) {
+                            crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);  // Crescent Right
+                        }
+                        else if (wavecount == 2) {
+                            crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Crescent Left
+                        }
+                        else if (wavecount == 3) {
+                            crescent(activeProjectiles, leftX, spawnposition, 0.15f, launchInterval);   // Triple Crescent
+                            crescent(activeProjectiles, middleX, spawnposition, 0.15f, launchInterval);
+                            crescent(activeProjectiles, rightX, spawnposition, 0.15f, launchInterval);
+                        }
+                        else if (wavecount == 4) {
 
-                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, -45.0f);
-                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, 0.0f);
-                    }
-                    else if (wavecount == 5) {
-                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, 0.0f);
-                        horizontal(activeProjectiles, battleBox, projectileSpeed-5, 30.0f);
-                    }
-                    else if (wavecount == 6) {
-                        pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y+50}, projectileSpeed);
-                        pinwheel(activeProjectiles, {rightX - 50.f, battleBox.getPosition().y-50}, projectileSpeed);
-                        pinwheel(activeProjectiles, {leftX + 50.f, battleBox.getPosition().y-50}, projectileSpeed);
-                    }
-                    else if (wavecount == 7) {
-                        pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
-                    }
-                    else if (wavecount == 8) {
-                        pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
-                    }
-                    else if (wavecount == 9) {
-                        homingdarts(activeProjectiles, battleBox, middleX);
-                    }
-                    else if (wavecount == 10) {
-                        homingdarts(activeProjectiles, battleBox, rightX);
-                    }
-                    else if (wavecount == 11) {
-                        homingdarts(activeProjectiles, battleBox, leftX);
+                            horizontal(activeProjectiles, battleBox, projectileSpeed-5, -45.0f);
+                            horizontal(activeProjectiles, battleBox, projectileSpeed-5, 0.0f);
+                        }
+                        else if (wavecount == 5) {
+                            horizontal(activeProjectiles, battleBox, projectileSpeed-5, 0.0f);
+                            horizontal(activeProjectiles, battleBox, projectileSpeed-5, 30.0f);
+                        }
+                        else if (wavecount == 6) {
+                            pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y+50}, projectileSpeed);
+                            pinwheel(activeProjectiles, {rightX - 50.f, battleBox.getPosition().y-50}, projectileSpeed);
+                            pinwheel(activeProjectiles, {leftX + 50.f, battleBox.getPosition().y-50}, projectileSpeed);
+                        }
+                        else if (wavecount == 7) {
+                            pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
+                        }
+                        else if (wavecount == 8) {
+                            pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
+                        }
+                        else if (wavecount == 9) {
+                            homingdarts(activeProjectiles, battleBox, middleX);
+                        }
+                        else if (wavecount == 10) {
+                            homingdarts(activeProjectiles, battleBox, rightX);
+                        }
+                        else if (wavecount == 11) {
+                            homingdarts(activeProjectiles, battleBox, leftX);
+                        }
+
+                        wavecount++;
+
+                        if (wavecount >= 12) {
+                            currentphase++;
+                            mapindex = 0;
+                            activeProjectiles.clear();
+                            magicPillar.clear();
+                            crystalBurst.clear();
+                            // the map is placed so that its BOTTOM edge sits on the bottom of the screen, because the track starts down there
+                            playerspawnmap(); // the wide start of the path is in the bottom centre of the map
+                        }
                     }
 
-                    wavecount = (wavecount + 1) % 12; // causing the looping for now
-                }
+                    if (magicTimer.getElapsedTime().asSeconds()>=3.0f-(difficultyIndex))
+                    {
+                        //Spawn on random sides of the map :
+                        float randomX= static_cast<float>(rand()%400+220);
+                        verticle(magicPillar,randomX,difficultyIndex) ;
+                        magicTimer.restart();
+                    }
+                    if (burstTimer.getElapsedTime().asSeconds()>=burstDelay){
+                        //burst loading
+                        burst(crystalBurst,difficultyIndex,Bosssprite.getPosition(),launchInterval);
+                        //creates random BUrst interval from 1 - 9 seconds
+                        burstDelay = 1.f + rand()%900/100.f ;
 
-                if (magicTimer.getElapsedTime().asSeconds()>=3.0f-(difficultyIndex))
-                {
-                    //Spawn on random sides of the map :
-                    float randomX= static_cast<float>(rand()%400+220);
-                    verticle(magicPillar,randomX,difficultyIndex) ;
-                    magicTimer.restart();
-                }
-                if (burstTimer.getElapsedTime().asSeconds()>=burstDelay){
-                    //burst loading
-                    burst(crystalBurst,difficultyIndex,Bosssprite.getPosition(),launchInterval);
-                    //creates random BUrst interval from 1 - 9 seconds
-                    burstDelay = 1.f + rand()%900/100.f ;
+                        burstTimer.restart();
 
-                    burstTimer.restart();
-
+                    }
                 }
 
                 //update the projectiles
@@ -1149,9 +1284,25 @@ int main() {
                 updateProjectiles(magicPillar, dt, width , height , Playersprite.getPosition(), 10.f);
                 updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
 
+                // counts down the i-frames
+                if (invulnerabilitytimer > 0.0f)
+                {
+                    invulnerabilitytimer -= dt;
+                }
+
                 // check the collissins of they happen brrrr (Bazil)
-                if (collision(activeProjectiles, Playersprite.getPosition()) || collision(magicPillar,Playersprite.getPosition()) ||
-                    collision(crystalBurst, Playersprite.getPosition())) {
+                // only ONE collision check per frame, map collision only counts in phase 2
+                bool hit = collision(activeProjectiles, Playersprite.getPosition()) ||
+                           collision(magicPillar, Playersprite.getPosition()) ||
+                           collision(crystalBurst, Playersprite.getPosition());
+                if (currentphase == 2)
+                {
+                    hit = hit || mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition());
+                }
+
+                if (hit && invulnerabilitytimer <= 0.0f) {
+                    if (currentphase ==1) invulnerabilitytimer = 1.0f; // frames where you can't get hit again
+                    if (currentphase ==2) invulnerabilitytimer= 10.0f; //for the 2nd phase
                     shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
                     shootSound.play(); // Makes sound effect play when player gets hit (Haras)
                     healthBarUpdate(healthBar );
@@ -1187,13 +1338,19 @@ int main() {
 
             window.clear();
             //Work required
-
+            if (currentphase == 2)
+            {
+                window.draw(mapsprite); // map only shows up in phase 2, it did not make for cool background in phase 1 tbh
+            }
             window.draw(boundaryRect) ;
             window.draw(healthBar) ;
-            window.draw(battleBox);
-            window.draw(Bosssprite);
-            window.draw(speechBubble);
-            window.draw(speech);
+            if (currentphase == 1)
+            {
+                window.draw(battleBox); // box only in phase 1, in phase 2 it would cover the track and it would be annoying. o7 battlebox
+                window.draw(Bosssprite);
+                window.draw(speechBubble);
+                window.draw(speech);
+            }
 
 
             // draw the projectiles with the hazard trail
@@ -1226,7 +1383,7 @@ int main() {
             // Draw Player on top
             window.draw(Playersprite);
 
-            if (healthBar.getSize().x <= 135&& healthBar.getSize().x >60 )
+            if (healthBar.getSize().x <= 135 && healthBar.getSize().x >60 )
             healthBar.setFillColor(sf::Color(243 , 156 , 18));
 
             if (healthBar.getSize().x<=60 && healthBar.getSize().x>0){
@@ -1252,9 +1409,14 @@ int main() {
                 Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                 activeProjectiles.clear(); //Clears all previous projectiles
                 wavecount = 0; //restart waves
+                currentphase = 1; // back to phase 1
+                mapindex = 0;
+                invulnerabilitytimer = 0.0f; // no leftover i-frames
+                placemapstart(); // map back to start (bottom of the map on the bottom of the screen)
                 magicTimer.restart() ;
                 waveTriggerClock.restart(); //resets attack timings
                 burstTimer.restart();
+                burstDelay = 10.0f ;
                 crystalBurst.clear();
                 magicPillar.clear() ;
                 shakeTimer = 0.0f; // resets shakeTimer
