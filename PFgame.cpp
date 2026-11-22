@@ -50,6 +50,7 @@ struct Projectile {
     float spawnDelay = 0.0f;
     float hitBox = 10.f ;
     float rotation = 0.0f ; //This is required for the falling crystals ;
+    float steeringtime = 0.0f; //this is for homing projectiles (Haras)
 };
 
 
@@ -661,7 +662,7 @@ void pinwheel(vector<Projectile>& activeProjectiles, Vector2f centerPos, float p
     }
 }
 
-// for the 4th attack, the homing projectiles (Bazil comments in this function)
+// for the 4th attack, the homing projectiles (Bazil comments in this function, unless specified otherwise)
 void homingdarts(vector<Projectile>& activeProjectiles, const RectangleShape& battleBox, float centerX) {
     Vector2f boxSize = battleBox.getSize();//simple enough, obtaining size, copy pasted this mweheheh (FROM THE CODE ABOVE NOT AI OMG)
 
@@ -673,6 +674,7 @@ void homingdarts(vector<Projectile>& activeProjectiles, const RectangleShape& ba
         proj.launchTimer = 0.7f + (i * 0.2f); //launched at intervals with i
         proj.tracksPlayer = true;      //well like, duh
         proj.leavesTrail = false; //no trail for this one
+        proj.steeringtime = 1.2f; // steer projectile for 1.2 sceonds and then it flies of screen, //this is for homing projectiles (Haras)
         activeProjectiles.push_back(proj);
     }
 }
@@ -709,13 +711,29 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
                     if (length != 0.0f) {
                         direction /= length; //to give a unit vector so it doesn't fly at mach speed (unless I change this and decide to troll the players ig)
                     }
-                    p.velocity = direction * projectileSpeed;
+                    float launchspeed = (p.steeringtime > 0.0f) ? projectileSpeed * 0.5f : projectileSpeed;
+                    p.velocity = direction * launchspeed;
                 }
                 p.isLaunched = true; //its out of the prison yay
             }
         }
         else { //projectile is launched
-            //implemented delta-time (Haras)
+            //implemented delta-time, also implemented homing missles (Haras)
+            if (p.steeringtime > 0.0f) {
+                p.steeringtime -= t;
+                Vector2f desired = { playerPos.x - p.position.x, playerPos.y - p.position.y };
+                float desiredlength = sqrt(desired.x * desired.x + desired.y * desired.y);
+                if (desiredlength > 0.0f) {
+                    desired /= desiredlength;
+                    float dartspeed = projectileSpeed * 0.5f;
+                    float turnrate = 1.5f; // if you lower this value then subtler curve, higher then more accurate homing
+                    p.velocity += desired * (dartspeed * turnrate * t);
+                    float curvespeed = sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y);
+                    if (curvespeed > 0.0f) {
+                        p.velocity = (p.velocity / curvespeed) * dartspeed;
+                    }
+                }
+            }
             p.position += p.velocity * t * 30.0f; //takes your point and adds the velocity onto it every frame which moves it
             // if this projectile leaves a trail, insert the trail every frame
             if (p.leavesTrail) {
@@ -1070,7 +1088,7 @@ int main() {
     Sound shootSound(shootBuffer);
 
     float soundVolume = 50.0f; // SF variable declaration, I lowered the default value (Haras)
-    float musicVolume = 20.0f; // BGM variable dec (Haras)
+    float musicVolume = 20.0f; // BGM variable declaration, I lowered the default value (Haras)
     float shakeIntesity = 2.0f; // Default pixel offset for SI, lowered it for smoother experience (Haras)
     float shakeTimer = 0.0f; // Will keep track of duration of active shake (Haras)
 
