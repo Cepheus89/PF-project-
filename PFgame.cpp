@@ -19,7 +19,18 @@ enum class GameState {
     Playing,
     Settings,
     Paused, // (Haras)
-    Death
+    Death,
+    Shop
+};
+
+enum heartType{
+    red ,
+    golden,
+    blue ,
+    green,
+    pink ,
+    purple
+
 };
 
 struct Star {
@@ -50,6 +61,7 @@ struct Projectile {
     float spawnDelay = 0.0f;
     float hitBox = 10.f ;
     float rotation = 0.0f ; //This is required for the falling crystals ;
+    bool parried = false ; //projectiles can be parried
     float steeringtime = 0.0f; //this is for homing projectiles (Haras)
 };
 
@@ -69,7 +81,7 @@ Text createCenteredText(const Font& font, const string& str, unsigned int size, 
 
 //this handles the spacing
 
-vector<Text> createMenuItems(const Font& font, const vector<string>& options, float startY = 280.f, float spacing = 65.f, unsigned int fontSize = 30) {
+vector<Text> createMenuItems(const Font& font, const vector<string>& options, float startY = 280.f, float spacing = 65.f, unsigned int fontSize = 30, float startX = 400.f) {
     vector<Text> items;
     //Takes a list of items and places them vertically so they look aligned
     int rowIndex = 0 ;
@@ -78,7 +90,7 @@ vector<Text> createMenuItems(const Font& font, const vector<string>& options, fl
         Text menuItem(font, textString, fontSize);
         FloatRect bounds = menuItem.getLocalBounds();
         menuItem.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-        menuItem.setPosition({400.f, startY + rowIndex * spacing});
+        menuItem.setPosition({startX, startY + rowIndex * spacing});
         menuItem.setFillColor(Color(180, 180, 180));
         items.push_back(menuItem);
 
@@ -89,11 +101,12 @@ vector<Text> createMenuItems(const Font& font, const vector<string>& options, fl
 
 
 //reduces health bar each time when hit
-void healthBarUpdate(RectangleShape& healthBar )
+void healthBarUpdate(RectangleShape& healthBar , float damage )
 {
+    //also now we pass damage instead of fixed value ;
     Vector2f currentPosition = healthBar.getSize() ;
     float hitpoints = currentPosition.x;
-    hitpoints -= 15.f ;
+    hitpoints -= damage ;
     healthBar.setSize({hitpoints, 20.0f});
 
 }
@@ -108,7 +121,8 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                       vector<Text>& startMenuItems, vector<Text>& pauseMenuItems, vector<string>& startOptions,
                       int& difficultyIndex, const vector<string>& difficulties, const Font& font, int& changeState, GameState& previousState,
                       float& speed,float& projectileSpeed,float& waveInterval,float& launchInterval,
-                      float& soundVolume, float& musicVolume, float& shakeIntensity) { // (Haras)
+                      float& soundVolume, float& musicVolume, float& shakeIntensity,int&currentHeart , Texture& hearts, const vector<string>& heartFiles ,
+                      float scaling[] , Sprite& playerSprite, Sprite& playerIcon  ) { // (Haras)
     //Making menu functional for soundvolume and musicvolume and shakeintensity changes (Haras)
     //gets new mouse pixel also works on all types / sizes of the screen
 
@@ -155,6 +169,14 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                     }
                     else if (hoveredIndex == 2)
                         window.close();
+
+                    //These changes brought too the main menu
+                    else if (hoveredIndex==3){
+                        currentState = GameState::Tutorial ;
+                    }
+                    else if (hoveredIndex==4)
+                        currentState = GameState::Shop;
+
                 }
 
                 // For the sub menu
@@ -169,7 +191,9 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                         launchInterval = 0.3 -0.1 *(difficultyIndex -1) ;
                         waveInterval = 0.8f - 0.2f * (difficultyIndex-1) ;
                     }
+                    //work in prpgress
                     else if (hoveredIndex == 1)
+                        //Change this to endless please
                         currentState = GameState::Tutorial; //Tutorial page add textures
                     else if (hoveredIndex == 2) {
                         //
@@ -192,6 +216,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                         currentState = GameState::Settings;
                     }
                     else if (hoveredIndex == 2) {
+                        previousState = GameState::Menu ; // THis was added because previous state remained pause if we
                         currentState = GameState::Menu;
                         changeState = 0; // (Haras) for game end screen overhaul
                     }
@@ -206,6 +231,7 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                             changeState = 2 ;
                         }
                         else if (hoveredIndex == 1) {
+                            previousState = GameState::Menu ;
                             currentState = GameState::Menu;
                             changeState = 0; // (Haras) for game end screen overhaul
 
@@ -225,9 +251,10 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 else if (currentState == GameState::Settings) {
                     currentState = previousState;
                 }
-                else if (currentState == GameState::Tutorial || currentState == GameState::Playing) {
-                    currentState = GameState::StartMenu;
+                else if (currentState==GameState::Tutorial|| currentState== GameState::Shop){
+                    currentState=GameState::Menu ;
                 }
+
                 else if (currentState == GameState::Paused) {
                     currentState = GameState::Playing;
                     changeState = 2;
@@ -269,6 +296,38 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 }
 
             }
+            if (currentState == GameState::Shop){
+                bool changed =false ;
+                if (keyPressed->code == Keyboard::Key::Right) {
+                    currentHeart=( currentHeart +1)%6 ; // move to the right skin
+                    changed = true ;
+                }
+                else if (keyPressed->code== Keyboard::Key::Left){
+                    currentHeart = (currentHeart+5 )%6 ;
+                    changed = true ;
+                }
+
+
+                //if a new skin selected we change the skin display and all sprites
+                if (changed){
+                    // get the new texture and skin
+                    hearts.loadFromFile(heartFiles[currentHeart]);
+                    hearts.setSmooth(false) ;
+
+                    //change sprite texture ;
+                    playerSprite.setTexture(hearts,true) ;
+                    FloatRect bounds= playerSprite.getLocalBounds();
+                    playerSprite.setOrigin({bounds.size.x/2.f, bounds.size.y/2.f}) ;
+                    playerSprite.setScale({scaling[currentHeart],scaling[currentHeart]}) ;
+
+                    playerIcon.setTexture( hearts,true) ;
+                    playerIcon.setOrigin({bounds.size.x/2.f, bounds.size.y/2.f}) ;
+
+                    playerIcon.setScale({scaling[currentHeart], scaling[currentHeart] }) ;
+
+                }
+            }
+
         }
     }
 
@@ -282,11 +341,13 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
                 item.setFillColor(Color::Yellow);
                 //resize
                 item.setScale({1.15f, 1.15f});
-            } else {
+            }
+            else {
                 // (Haras) for game end screen overhaul
                 if (currentState == GameState::Death) {
                     item.setFillColor(indexCounter == 0 ? Color(255, 40, 40) : Color::White);
                 }
+
                 else {
                     item.setFillColor(Color(180, 180, 180));
                 }
@@ -297,6 +358,8 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
         }
     }
 }
+
+
 
 // Starfield initialization across 800x600 bounds
 void starfieldCreation(vector<Star>& myStars) {
@@ -333,12 +396,39 @@ void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 
 
 
+void keys(RenderWindow& window,const Font& font,const string& newKey,Vector2f pos,Vector2f keySize, bool isPressed)
+{
+
+
+    float offSet = isPressed ? 3.f:0.f ; //Using this instead of messsy if
+
+    //actual key being created
+    //box surrounding it
+    RectangleShape keyCreated ({keySize}) ;
+    keyCreated.setOrigin({keySize.x/2.f,keySize.y/2.f});
+
+    keyCreated.setPosition({pos.x,pos.y+offSet}) ;
+    keyCreated.setFillColor(isPressed? Color(60,60,20): Color(20,20,25)) ;
+    keyCreated.setOutlineThickness({3.f}) ;
+
+    keyCreated.setOutlineColor(isPressed?Color::Yellow: Color::White) ; // this allowes to change color when key press of the border
+
+    Text key =createCenteredText(font, newKey, 20, {pos.x,pos.y+offSet-2.f},isPressed?Color::Yellow : Color::White) ;
+
+    window.draw (keyCreated ) ;
+    window.draw (key);
+    //draw in right sequence ;
+
+}
+
+
+
 // Rendering all the stuff for menu
 //remove the stuff from here like the death rectangle bring it in main so it can be used in other functions
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
                const Text& titleText, const vector<Text>& mainMenuItems, vector<Text>&deathMenuItems ,
                const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
-                RectangleShape& dimBackground, const Sprite& playerSprite) {
+                RectangleShape& dimBackground, const Sprite& playerSprite , int currentHeart) {
     //rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras),
     // it has been edited for game end screen overhaul (Haras)
 
@@ -376,16 +466,66 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
     //Prints the tutorial examples , (use better graphics by images/ texture)
     else if (currentState == GameState::Tutorial) {
         Text title = createCenteredText(font, "HOW TO PLAY", 40, {400.f, 120.f}, Color::Yellow);
-        Text body = createCenteredText(font,"[ WASD / ARROWS ] : Move player\n""Dodge enemy bullets and survive!\n\n""(Press ESC to return)",22, {400.f, 320.f}, Color::White);
+
+        //checking for each case individually spacoing of 55 in between
+        keys(window, font , "W" , {225.0f,200.0f} , { 45.f,45.f }, Keyboard::isKeyPressed(Keyboard::Key::W) );
+        keys(window, font , "S" , {225.0f,255.0f} , { 45.f,45.f }, Keyboard::isKeyPressed(Keyboard::Key::S) );
+        keys(window, font , "D" , {280.0f,255.0f} , { 45.f,45.f }, Keyboard::isKeyPressed(Keyboard::Key::D) );
+        keys(window, font , "A" , {170.f,255.0f} , { 45.f,45.f }, Keyboard::isKeyPressed(Keyboard::Key::A) );
+
+        keys(window, font , "Space" , {550.f,255.f} , { 160.f,45.f }, Keyboard::isKeyPressed(Keyboard::Key::Space) );
+        Text movementControls = createCenteredText(font , "MOVEMENT" , 25 , {225.f,350.f},Color::White);
+
+        Text W = createCenteredText(font , "UP" , 15 , {225.f, 160.f},Color(255,255,255,200));
+        Text A = createCenteredText(font , "LEFT", 15 , {110.f,255.f},Color(255,255,255,200)) ;
+        Text S = createCenteredText(font , "DOWN", 15 , {225.f,300.f},Color(255,255,255,200)) ;
+        Text D = createCenteredText(font , "RIGHT", 15 , {340.f,255.f},Color(255,255,255,200)) ;
+        Text parry = createCenteredText(font, "PARRY", 25 , {550.f,350.f} , Color::White) ;
+
+        Text escapeText = createCenteredText(font , "Press ESC To Return", 25.f ,{400.f, 500.f},Color::Cyan) ;
+        window.draw(W) ;
+        window.draw(A) ;
+        window.draw(S) ;
+        window.draw(D) ;
+        window.draw(parry) ;
+        window.draw(escapeText) ;
+        window.draw(movementControls);
 
         window.draw(title);
-        window.draw(body);
-    }
 
-    //remove this and add a paused state ;
-    else if (currentState == GameState::Playing) {
-        Text playText = createCenteredText(font, "GAMEPLAY SCREEN \n\nDifficulty: " + currentDifficulty + "\n\n(Press ESC for Menu)", 26, {400.f, 300.f}, Color::White);
-        window.draw(playText);
+    }
+    else if (currentState== GameState::Shop){
+        //shop Title
+        Text ShopTitle = createCenteredText(font,"HEART SKINS ", 30.f , {400.f,150.f} , Color::Yellow) ;
+        window.draw(ShopTitle) ;
+        Sprite previewHeart = playerSprite ;
+        previewHeart.setScale({playerSprite.getScale().x*2.f, playerSprite.getScale().y*2.f}) ;
+        previewHeart.setPosition({400.f,270.f}) ;
+        window.draw(previewHeart) ;
+        string skinName ;
+
+        if (currentHeart == 0) {
+            skinName = "Red" ;
+        }
+        else if(currentHeart==1)
+            skinName= "Golden" ;
+        else if ( currentHeart == 2)
+            skinName = "Blue" ;
+        else if(currentHeart == 3)
+            skinName = "Green" ;
+        else if (currentHeart == 4)
+            skinName ="Pink" ;
+        else
+            skinName = "Purple" ;
+
+        Text skinTitle = createCenteredText(font ,"<    " + skinName + "    >" , 30.f,{400.f , 300.f}, Color::White );
+
+        Text controls = createCenteredText(font , "LEFT / RIGHT KEY TO SWITCH BETWEEN KEYS", 30.f , {400.f, 400.f}, Color::Yellow) ;
+        window.draw(skinTitle) ;
+        window.draw(controls) ;
+
+
+
     }
 
     else if (currentState == GameState::Paused) {
@@ -446,9 +586,10 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
 
         // player sprite on the spotlight stage (Haras)
         Sprite centerheart = playerSprite;
-        centerheart.setScale({ 0.14f, 0.14f });
+        centerheart.setScale({ 1.f, 1.f });
         centerheart.setPosition({ 400.f, 435.f });
         window.draw(centerheart);
+
         // game over and try again display (Haras)
         Text gameword = createCenteredText(font, "GAME", 78, { 400.f,105.f }, Color::White);
         gameword.setStyle(Text::Bold);
@@ -492,8 +633,10 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
 
 }
 
+
 // Player movement function with box containment (Bazil comments in this function)
-void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShape& battleBox, float dt, bool useBox) { //we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
+void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShape& battleBox, float dt, bool useBox) {
+    //we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
     Vector2f pos = playerSprite.getPosition(); //apparently the SFML library already has x and y stored so it doesn't need you to declare them. Cool ig
     //the movement stuff is self explanatory except one thing which I wrote down
     if (Keyboard::isKeyPressed(Keyboard::Scan::S)) {
@@ -514,9 +657,10 @@ void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShap
     Vector2f boxSize = battleBox.getSize(); //getting the width and height of the box because I tried to define the height and width
                                                 //directly into the code itself and I realized that I might neeed to change the box dimensions so I used getSize instead. Just to give myself some leeway
     float left = boxPosition.x - (boxSize.x / 2.0f) + 8.0f;
-    float right = boxPosition.x + (boxSize.x / 2.0f) - 8.0f;
+    float right = boxPosition.x + (boxSize.x / 2.0f) - 25.0f;
     float top = boxPosition.y - (boxSize.y / 2.0f) + 8.0f;
     float bottom = boxPosition.y + (boxSize.y / 2.0f) - 8.0f;
+
     if (!useBox) {
         // for phase 2 cuz we gotta allow player to move whereever fr
         left = 8.0f;
@@ -544,6 +688,7 @@ void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShap
 }
 
 
+
 //New fuunction for attack
 //attack spawns at te top and slowly comes down
 void verticle(vector<Projectile>& pillars,float xposition, int difficultyIndex)
@@ -566,19 +711,20 @@ void verticle(vector<Projectile>& pillars,float xposition, int difficultyIndex)
 
 void burst(vector<Projectile>& machineGun, int difficultyIndex, Vector2f bossPos, float launchInterval){
     //creating 20 randomly created crystals to remove predictability
-    for (int i =0; i <15 +5*(difficultyIndex-1) ; i++){
+    for (int i =0; i <13 +5*(difficultyIndex-1) ; i++){
         //new projectile to push to vector
         Projectile crystal ;
         crystal.position = bossPos ;
         crystal.isLaunched = true ;
         crystal.leavesTrail = false ;
         crystal.tracksPlayer = false ;
-        crystal.hitBox = 15.0 ;
+        crystal.hitBox = 12.0 ;
         //so it doesnt shoot al at once
-        crystal.spawnDelay = i* launchInterval/5.f ;
+        crystal.spawnDelay = i* launchInterval/4.f ;
         //random speeds and angle
 
         float angle ;
+        //setting angle to cover the field setting rotation setting speed and calculating velocity ;
         angle = 28.f + rand()%125 ;
         crystal.rotation= angle- 90 ;
         float speed ;
@@ -592,10 +738,11 @@ void burst(vector<Projectile>& machineGun, int difficultyIndex, Vector2f bossPos
     }
 }
 
+
 // The first wave stuff, crescent bullets (Bazil comments in this function)
 //bullets need to be launched more frequently
 void crescent(vector<Projectile>& activeProjectiles, float crescentcentre, float spawnposition, float spawnInterval, float launchInterval) {
-    int totalBullets = 7;
+    int totalBullets = 7  ;
     float totalSpawnTime = (totalBullets - 1) * spawnInterval;
     for (int i = 0; i < totalBullets; i++) {
         float step = 1.0f / (totalBullets - 1);
@@ -624,22 +771,26 @@ void horizontal(vector<Projectile>& activeProjectiles, const RectangleShape& bat
     Vector2f boxSize = battleBox.getSize(); //same thing
 
     float height = boxP.y + projectileposition; //basically the height at which the projectile spawns, we HATE this function
-    float left = boxP.x - boxSize.x / 2.0f-90.0f;
-    float right = boxP.x + boxSize.x / 2.0f+90.0f;
+    float left = boxP.x - boxSize.x / 2.0f-120.0f;
+    float right = boxP.x + boxSize.x / 2.0f+120.0f;
     //ok so I added the +90 and -90 because initially I dind't have them and the projectiles were spawning like RIGHT on the border and it was so weird ew. So I added the +90 and -90
     Projectile pLeft;
     pLeft.position = {left, height+20.0f};
     pLeft.velocity = {projectileSpeed, 0.0f};
     pLeft.leavesTrail = true;
+    pLeft.launchTimer = 0.8f  ;
 
     Projectile pRight;
     pRight.position = {right, height};
     pRight.velocity = {-projectileSpeed, 0.0f};
     pRight.leavesTrail = true;
+    pRight.launchTimer = 0.8f ;
+
 
     activeProjectiles.push_back(pLeft);
     activeProjectiles.push_back(pRight);
 }
+
 
 // This is the attack where the projectiles spawn in a circle and burst outwards (Bazil comments in this function)
 void pinwheel(vector<Projectile>& activeProjectiles, Vector2f centerPos, float projectileSpeed) {
@@ -663,6 +814,7 @@ void pinwheel(vector<Projectile>& activeProjectiles, Vector2f centerPos, float p
 }
 
 // for the 4th attack, the homing projectiles (Bazil comments in this function, unless specified otherwise)
+
 void homingdarts(vector<Projectile>& activeProjectiles, const RectangleShape& battleBox, float centerX) {
     Vector2f boxSize = battleBox.getSize();//simple enough, obtaining size, copy pasted this mweheheh (FROM THE CODE ABOVE NOT AI OMG)
 
@@ -744,6 +896,9 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
                 }
             }
         }
+
+
+
         // age the trail points
         for (int j = 0; j < (int)p.trail.size(); ) {
             p.trail[j].lifeTimer -= t;
@@ -762,6 +917,7 @@ void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned 
     }
 }
 
+
 // Map collisions go brrrrrrrrrrr heahehaheahehaheha
 bool mapcollission(const sf::Image &mapimage, const sf::Sprite &mapsprite, Vector2f playerpos) {
     Vector2f mapposition = mapsprite.getPosition();                      // map centre
@@ -776,10 +932,12 @@ bool mapcollission(const sf::Image &mapimage, const sf::Sprite &mapsprite, Vecto
     return !stonePath;
 }
 
+
+
 // For the collisions with projectiles logic here we go brrrrrrrrrrrr (Bazil comments in this function)
-bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos) {
+bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos ) {
     for (const auto& proj : activeProjectiles) {
-        if (proj.isLaunched) { //well like, yeah. It should only run if its launched
+        if (proj.isLaunched&&!proj.parried) { //well like, yeah. It should only run if its launched , also shouldnot work if parried
             float distX = playerPos.x - proj.position.x; //basically the horizontal distance between the projectile and the player
             float distY = playerPos.y - proj.position.y; //same thing but vertical
             if (sqrt(distX * distX + distY * distY) < proj.hitBox) { //pythagoras theorem shEEEESh
@@ -799,6 +957,99 @@ bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos) 
     return false;
 }
 
+
+// New line of code for boss proejctiles only runs if the object has been parried
+bool bossCollision(const vector<Projectile>& activeProjectiles, Vector2f bossPos) {
+    for (const auto& proj: activeProjectiles) {
+        if(proj.parried == true){
+            float dx = bossPos.x - proj.position.x ;
+            float dy  = bossPos.y -proj.position.y ;
+            if (sqrt(dx*dx+dy*dy)<proj.hitBox){
+                return true;
+            }
+
+        }
+    }
+    return false ;
+}
+
+void parryProj(vector<Projectile>& Projectile , Vector2f playerPos,Vector2f bossPos){
+
+    //For all projectiles
+    for (auto& proj :Projectile){
+        if(proj.isLaunched  ){
+            //calculating right distance for parry
+
+            float dx = playerPos.x - proj.position.x ;
+            float dy =playerPos.y -proj.position.y;
+            if (sqrt(dx*dx+dy*dy) <=28.f&& sqrt(dx*dx+dy*dy)>=12.f &&dy>=0) {
+                proj.tracksPlayer = false ;
+                //go to boss back
+
+                Vector2f bossDisplacement= {bossPos.x-proj.position.x , bossPos.y-proj.position.y} ;
+                //current projectile differce from boss
+                float length = sqrt(bossDisplacement.x*bossDisplacement.x+bossDisplacement.y*bossDisplacement.y) ;
+                if (length!= 0){
+                    bossDisplacement /=length ; //this is for unit vector so we can give new speed
+                }
+                proj.velocity = bossDisplacement * 20.0f ;
+
+                proj.parried = true ;
+
+            }
+        }
+    }
+
+}
+
+
+//new function to check for parrying
+void updateParrying(Sprite& blazeRod,const Sprite& playerSprite ,Vector2f bossPos ,  const Sprite& icon1,
+                 CircleShape& cooldownRing, RectangleShape& cover ,
+                 vector<Projectile>& activeProjectiles,vector<Projectile>& crystalBurst,
+                 bool& isParrying, float& parryTimer , float& cooldown, float dt){
+    // keeps balze rod by the side of player
+    blazeRod.setPosition({playerSprite.getPosition().x+5.f, playerSprite.getPosition().y+6.0f}) ;
+
+
+    if (isParrying) {
+        //finds time passed since button press
+        parryTimer+=dt;
+
+        float progress = parryTimer/0.15 ;//ratio of full swing
+        parryProj(activeProjectiles,playerSprite.getPosition(),bossPos) ; //calls the function so the projectile is redirected if hit exact
+        //if swing complete reset
+        if(progress>=1.0f){
+            isParrying  = false ;
+            blazeRod.setRotation(degrees(0)) ;
+            cooldown = 2.15f ; // if you parry can not parry for next 2 seconds//THis also includes
+            //the Motion of the swing of parry
+        }
+        else
+            {
+            //else set new rotation
+            float newAngle = -140.f*progress;
+            blazeRod.setRotation(degrees(newAngle)) ;
+            }
+        }
+        if (cooldown>0.0f) {
+            cooldown -= dt ;
+            //dim it
+            blazeRod.setColor(Color(120,120,120,100));
+            //New position of cover
+            cover.setPosition({icon1.getPosition().x,icon1.getPosition().y+(40-cooldown*20.f)});
+            cover.setFillColor(Color::Black);
+            cooldownRing.setOutlineColor(Color(255,255-255*cooldown/2.15,0));
+
+        }
+        //
+        else{
+            blazeRod.setColor(Color::White) ;
+            cover.setFillColor(Color::Transparent);
+            cover.setPosition(icon1.getPosition());
+            cooldownRing.setOutlineColor(Color::Cyan) ;
+        }
+}
 
 
 int main() {
@@ -823,11 +1074,28 @@ int main() {
 
     VertexArray starBackground(PrimitiveType::Points);
 
+
+    vector<string> heartFiles={
+        "Assets/RedHeart.png",
+        "Assets/GoldenHeart.png",
+        "Assets/BlueHeart.png",
+        "Assets/GreenHeart.png",
+        "Assets/PinkHeart.png",
+        "Assets/PurpleHeart.png"
+    };
+
+    float scaling[6] = {0.6, 0.6 , 0.42 , 0.6 , 0.6 , 0.50 } ;
+
     // Load Textures & Fonts
-    Texture texture;
-    if (!texture.loadFromFile("Assets/hearttemporary.png")) {
+    Texture hearts;
+    if (!hearts.loadFromFile(heartFiles[0])) {
         return -1;
+
     }
+    hearts.setSmooth(false) ;
+    int currentHeart= 0 ;
+
+
     Font font;
     if (!font.openFromFile("Assets/font.ttf")) {
         return -1;
@@ -873,25 +1141,36 @@ int main() {
     int hoveredIndex = -1;
 
     // Main Menu Setup
+
     vector<string> mainOptions = {"START GAME", "SETTINGS", "EXIT"};
     vector<Text> mainMenuItems = createMenuItems(font, mainOptions, 280.f, 65.f, 30);
+    //Did this to move tutorial on main page
+    mainOptions.push_back("TUTORIAL");
+    //using [0] because of create menu item returns vector text
+    mainMenuItems.push_back(createMenuItems(font, {mainOptions[3]},550.f,65.f,30.f,700.f)[0]);
+
+    mainOptions.push_back("SKINS") ;
+
+    mainMenuItems.push_back(createMenuItems(font,{mainOptions[4]},550.f, 65.f,30.f,70.f)[0]) ;
 
     // Start Sub-Menu Setup (Difficulty & Tutorial)
-    vector<string> difficulties = {"EASY", "NORMAL", "HARD"};
+    //Add more difficulties
+    vector<string> difficulties = {"EASY", "NORMAL", "BULLET HELL"};
     int difficultyIndex = 1; // Default to NORMAL
 
+    //Removed tutorial to make the screen cleaner
     vector<string> startOptions = {
         "DIFFICULTY: " + difficulties[difficultyIndex],
-        "TUTORIAL",
+        "ENDLESS",
         "NEW GAME",
         "BACK"
     };
 
-    //understand this
     vector<Text> startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
 
     vector<string> pauseOptions = { "RESUME", "SETTINGS", "MAIN MENU", "EXIT GAME" };
     vector<Text> pauseMenuItems = createMenuItems(font, pauseOptions, 240.f, 60.f, 26);
+
     // for game end menu overhaul (Haras)
     vector<Text> deathMenuItems = {
 
@@ -913,17 +1192,46 @@ int main() {
     //health bar
     RectangleShape healthBar({300.f , 20.f}) ;
     healthBar.setOrigin({150.f, 10.f}) ;
-    healthBar.setPosition({200.0f , 30.f}) ;
-    healthBar.setFillColor(sf::Color(57, 255, 20));
+    healthBar.setPosition({235.0f , 30.0f}) ;
+    healthBar.setFillColor(Color(57, 255, 20));
 
     //health bar boundary and underneath
-    RectangleShape boundaryRect({300.f, 20.f});
-    boundaryRect.setOrigin({150.f,10.f}) ;
-    boundaryRect.setPosition({200.f, 30.f}) ;
+    RectangleShape boundaryRect({300.0f, 20.0f});
+    boundaryRect.setOrigin({150.f,10.0f}) ;
+    boundaryRect.setPosition({235.0f, 30.0f}) ;
     boundaryRect.setFillColor(sf::Color(190,44 , 35)) ;
     boundaryRect.setOutlineThickness(4.f);
     boundaryRect.setOutlineColor(sf::Color(140,90,43));
+    //bossHealth
+    RectangleShape bossHealth({500.0f,20.0f}) ;
+    bossHealth.setOrigin({250.0f,10.0f}) ;
+    bossHealth.setPosition({400.0f,100.0f}) ;
+    bossHealth.setFillColor(Color(155, 40, 230)) ;
 
+    //boss health bar underneath and border :
+    RectangleShape healthBoundary({500.f,20.f}) ;
+    healthBoundary.setOrigin({250.f,10.f}) ;
+    healthBoundary.setPosition({400.f,100.f}) ;
+    healthBoundary.setOutlineThickness(4.f) ;
+    healthBoundary.setOutlineColor(Color(220,25,40)) ;
+    healthBoundary.setFillColor(Color(50,180,255)) ;
+
+
+    float cooldown = 0.0f ; //cooldwon for next swing
+    bool isParrying = false ;
+    float parryTimer = 0.0 ; // how many seconds gone
+    float parryDuration = 0.15f ; // total swing duration
+
+    Texture rod ;
+    rod.loadFromFile("Assets/NewBlazeRod.png") ;
+
+    Sprite blazeRod(rod) ;
+    blazeRod.setScale({0.37f,0.37f}) ;
+
+    Vector2u rodSize = rod.getSize() ;
+    //set to left corner
+    blazeRod.setOrigin({0,float(rodSize.y)}) ;
+    blazeRod.setPosition({406.f,306.f}) ;
 
     // Boss Sprite Setup
     Sprite Bosssprite(texture3);
@@ -931,13 +1239,13 @@ int main() {
     Bosssprite.setScale({0.1f, 0.1f});
     Bosssprite.setOrigin({bossbounds.size.x / 2.f, bossbounds.size.y / 2.f});
     Bosssprite.setPosition({width / 2.0f, 240.0f });
+    Text bossName = createCenteredText(font, "MEHMOOD SAHAB",15 , {400.f,75.f}, Color(255,255,255,200)) ;
 
     //Texture magic/ new projectile;
     Texture magic ;
     if (!magic.loadFromFile("Assets/Magic atack.png")) {
         return -1;
     }
-
     Sprite MagicAttack(magic);
 
     MagicAttack.setTexture(magic);
@@ -948,6 +1256,7 @@ int main() {
 
     //Crystal Projectile that will be fired like a machine gun randomly
     Texture crystal ;
+
     if(!crystal.loadFromFile("Assets/fallingCrystal.png"))
         return -1 ;
 
@@ -959,11 +1268,34 @@ int main() {
 
 
     // Player Sprite Setup
-    Sprite Playersprite(texture);
+    Sprite Playersprite(hearts);
     FloatRect playerbounds = Playersprite.getLocalBounds();
-    Playersprite.setScale({0.1f, 0.1f});
+    Playersprite.setScale({scaling[currentHeart], scaling[currentHeart]});
     Playersprite.setOrigin({playerbounds.size.x / 2.0f, playerbounds.size.y / 2.0f});
     Playersprite.setPosition(battleBox.getPosition());
+
+    //playerIcon beside the screen
+    Sprite playerIcon (hearts) ;
+    playerIcon.setScale({scaling[currentHeart], scaling[currentHeart] }) ;
+
+    playerIcon.setOrigin({playerbounds.size.x/2.f,playerbounds.size.y/2.0f}) ;
+    playerIcon.setPosition({25.f,30.f}) ;
+
+
+    //Indicator of parry with icon
+    CircleShape cooldownRing ({15.f}) ;
+    cooldownRing.setOrigin({15.f,15.f}) ;
+    cooldownRing.setPosition(playerIcon.getPosition()) ; // setting origin as same so it covers uniformally
+    cooldownRing.setFillColor(Color::Transparent) ;
+    cooldownRing.setOutlineThickness({4.f}) ;
+    cooldownRing.setOutlineColor(Color::Cyan) ;
+
+    //rectangle shape for covering the ring to show cooldown ;
+    RectangleShape cover ({40.f,44.f}) ;
+    cover.setOrigin({20.f,22.f}) ;
+    cover.setPosition(playerIcon.getPosition()) ;
+    cover.setFillColor(Color(120,120,30,230)) ;
+
 
     //standard speed
 
@@ -998,6 +1330,7 @@ int main() {
 
     float waveInterval = 0.8f ;
     int wavecount = 0;
+
     int currentphase = 1;     // the phase we're at, duh
     float invulnerabilitytimer = 0.0f; // invincibility frames cuz im generous :)
 
@@ -1007,7 +1340,7 @@ int main() {
     projSprite.setScale({0.8f, 0.8f});
     projSprite.setOrigin({projBounds.size.x / 2.f, projBounds.size.y / 2.f});
 
-    // The Map texture yayyy 2nd phase woohoo
+     // The Map texture yayyy 2nd phase woohoo
     vector<string> mapFiles = {
         "Assets/map_track.png",
         "Assets/map_track2.png",
@@ -1024,11 +1357,11 @@ int main() {
     int mapindex = 0; //to cycle between the maps
     float mapbiggie = 1.4f; //map was too small when I initially used it soo yayy
     Sprite mapsprite(mapTextures[0]); //
-    mapsprite.setScale({mapbiggie, mapbiggie}); //heh, just scaling 
+    mapsprite.setScale({mapbiggie, mapbiggie}); //heh, just scaling
 
     float halfwidth = mapTextures[2].getSize().x * 0.5f; //for map3 cuz it wasn't detecting the endpoint at the end of map 3
 
-    vector<float> starter = { 
+    vector<float> starter = {
         390.f, //for the first map
         mapTextures[1].getSize().x * 0.5f, //2nd map
         halfwidth //3rd map
@@ -1045,7 +1378,7 @@ int main() {
         float texWidth = static_cast<float>(mapTextures[mapindex].getSize().x); //finds the pixel width of the map
         mapbiggie = static_cast<float>(width) / texWidth; //divides the screen width by pixel width
         mapsprite.setScale({mapbiggie, mapbiggie}); //makes sure the zooming in doesn't cut parts of the map out dyring scaling
-        float mapheight = mapsprite.getGlobalBounds().size.y; 
+        float mapheight = mapsprite.getGlobalBounds().size.y;
         mapsprite.setPosition({0.0f, height - mapheight}); //put the rest of the map above the screen
     };
 
@@ -1053,6 +1386,9 @@ int main() {
         placemapstart();
         Playersprite.setPosition({mapsprite.getPosition().x + starter[mapindex] * mapbiggie, height - 50.0f});
     };
+    float invulnerabilitytimerMagicAttack = 0.0f ;
+    //created a diff for this 1 second immunity too much for this
+
 
     auto resetToPhase1 = [&]() {
         Playersprite.setPosition(battleBox.getPosition());
@@ -1067,7 +1403,10 @@ int main() {
         waveTriggerClock.restart();
         magicTimer.restart();
         burstTimer.restart();
+        bossHealth.setSize({500.0f,20.0f}) ;
+        invulnerabilitytimerMagicAttack = 0.0f ;
     };
+
 
     // Hazard trail dot shape
     //Use the created flame sprite / texture pack here
@@ -1088,7 +1427,8 @@ int main() {
     Sound shootSound(shootBuffer);
 
     float soundVolume = 50.0f; // SF variable declaration, I lowered the default value (Haras)
-    float musicVolume = 20.0f; // BGM variable declaration, I lowered the default value (Haras)
+    float musicVolume = 20.0f; // BGM variable dec (Haras)
+
     float shakeIntesity = 2.0f; // Default pixel offset for SI, lowered it for smoother experience (Haras)
     float shakeTimer = 0.0f; // Will keep track of duration of active shake (Haras)
 
@@ -1100,9 +1440,9 @@ int main() {
     bgMusic.setLooping(true);
     bgMusic.play();
 
+
     while (window.isOpen()) {
         float dt = frameClock.restart().asSeconds();
-        starfieldBackground(myStars, starBackground, dt); // snowfall animation always plays in main menu (Haras)
 
         //gets recent mouse position
         //this statemet check that if there new games is pressed we change menu too the recent menu and end the previous menu
@@ -1114,7 +1454,8 @@ int main() {
             // integrated soundvolume and musicvolume variable
             menu_Interaction(window, view, currentState, hoveredIndex,
                  mainMenuItems,deathMenuItems , startMenuItems, pauseMenuItems, startOptions,
-                 difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
+                 difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval,
+                 soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon);
 
             bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
@@ -1124,19 +1465,28 @@ int main() {
                     Playersprite.setPosition(battleBox.getPosition()); //This will put player position back on center
                     activeProjectiles.clear(); //Clears all previous projectiles
                     wavecount = 0; //restart waves
+
                     currentphase = 1; // back to phase 1 cuz yes
                     mapindex = 0;
                     invulnerabilitytimer = 0.0f; // no leftover invunerability frames cuz I can't have the players getting too comfy
-                    placemapstart(); // map back to start (bottom of the map on the bottom of the screen)
                     waveTriggerClock.restart(); //resets attack timings
                     shakeTimer = 0.0f; // resets shakeTimer
                     healthBar.setSize({300.f,20.f})  ;
                     healthBar.setFillColor(Color(57,255,20));
+                    bossHealth.setSize({500.f,20.f}) ;
                     magicTimer.restart() ;
                     burstTimer.restart() ;
-                    burstDelay = 10.0f ;
                     magicPillar.clear() ;
                     crystalBurst.clear();
+                    isParrying = false ;
+                    cooldown = 0.f ;
+                    placemapstart(); // map back to start (bottom of the map on the bottom of the screen)
+
+                    burstDelay = 10.f ;
+
+                    parryTimer = 0.0f ;
+                    blazeRod.setColor(Color::White);
+                    blazeRod.setRotation(degrees(0.0f)) ;
                 }
                 frameClock.restart(); //prevent dt jump on first frame
                 view.setCenter({ width / 2.0f , height / 2.0f }); // snaps back to center
@@ -1144,9 +1494,9 @@ int main() {
 
             }
             // integrated soundvolume and musicVolume variable
-            rendering(window, starBackground, currentState, titletext,
-            mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-            DimScreen, Playersprite);
+            rendering(window, starBackground, currentState, titletext,mainMenuItems,deathMenuItems,
+                       startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume,
+                       musicVolume, shakeIntesity, DimScreen, Playersprite , currentHeart);
             window.display() ;
 
         }
@@ -1159,21 +1509,31 @@ int main() {
                     else if (const auto* keyPressed = event->getIf<Event::KeyPressed>()) {
 
 
-                            if (keyPressed->scancode == Keyboard::Scancode::Escape) {
+                            if(keyPressed->scancode == Keyboard::Scancode::Escape) {
                                 currentState = GameState::Paused; //
                                 previousState = GameState::Paused;
                                 hoveredIndex = -1;
                                 changeState = 1 ;
                             }
+                            else if(keyPressed->scancode == Keyboard::Scancode::Space&&!isParrying&& cooldown<=0.0f&& currentphase==1) {
+                                isParrying =true ;
+                                parryTimer = 0.0f ;
+                            }
+
 
                     }
                 }
 
 
-
                 // Call player movement with box to prevent excess movement hahahahah suffer players(Bazil)
                 //implemented delta-time (Haras)
+
                 handlePlayerMovement(Playersprite, currentphase == 2 ? speed * 0.9f : speed, battleBox, dt, currentphase == 1);
+
+
+                updateParrying(blazeRod, Playersprite, Bosssprite.getPosition(), playerIcon,
+                        cooldownRing, cover, activeProjectiles, crystalBurst,
+                        isParrying, parryTimer, cooldown, dt) ;
 
                 // the speed of the map scroll cuz, yeah
                 float mapscrollspeed = 40.0f;
@@ -1266,18 +1626,10 @@ int main() {
                             homingdarts(activeProjectiles, battleBox, leftX);
                         }
 
-                        wavecount++;
+                        wavecount = (wavecount+1)%12;
 
-                        if (wavecount >= 12) {
-                            currentphase++;
-                            mapindex = 0;
-                            activeProjectiles.clear();
-                            magicPillar.clear();
-                            crystalBurst.clear();
-                            // the map is placed so that its BOTTOM edge sits on the bottom of the screen, because the track starts down there
-                            playerspawnmap(); // the wide start of the path is in the bottom centre of the map
-                        }
                     }
+
 
                     if (magicTimer.getElapsedTime().asSeconds()>=3.0f-(difficultyIndex))
                     {
@@ -1293,42 +1645,74 @@ int main() {
                         burstDelay = 1.f + rand()%900/100.f ;
 
                         burstTimer.restart();
-
                     }
+
                 }
 
                 //update the projectiles
-                updateProjectiles(crystalBurst, dt, width , height , Playersprite.getPosition(),10.f) ;
-                updateProjectiles(magicPillar, dt, width , height , Playersprite.getPosition(), 10.f);
+                updateProjectiles(crystalBurst, dt, width , height , Playersprite.getPosition(),12.f- 5*(difficultyIndex-1)) ;
+                updateProjectiles(magicPillar, dt, width , height , Playersprite.getPosition(), 12.f-5*(difficultyIndex-1));
                 updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
 
                 // counts down the i-frames
-                if (invulnerabilitytimer > 0.0f)
+                if (invulnerabilitytimer > 0.0f||invulnerabilitytimerMagicAttack>0.0f)
                 {
                     invulnerabilitytimer -= dt;
+                    invulnerabilitytimerMagicAttack -= dt ;
                 }
 
                 // check the collissins of they happen brrrr (Bazil)
                 // only ONE collision check per frame, map collision only counts in phase 2
                 bool hit = collision(activeProjectiles, Playersprite.getPosition()) ||
-                           collision(magicPillar, Playersprite.getPosition()) ||
                            collision(crystalBurst, Playersprite.getPosition());
                 if (currentphase == 2)
                 {
                     hit = hit || mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition());
                 }
-
+                //should this be removed ???
                 if (hit && invulnerabilitytimer <= 0.0f) {
-                    if (currentphase ==1) invulnerabilitytimer = 1.0f; // frames where you can't get hit again
-                    if (currentphase ==2) invulnerabilitytimer= 10.0f; //for the 2nd phase
+                    if (currentphase ==1) invulnerabilitytimer = 0.1f; // frames where you can't get hit again
+                    if (currentphase ==2) invulnerabilitytimer= 2.0f; //for the 2nd phase
                     shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
                     shootSound.play(); // Makes sound effect play when player gets hit (Haras)
-                    healthBarUpdate(healthBar );
+                    healthBarUpdate(healthBar, 15 - 3* (difficultyIndex-1) );
                     shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
-                    if (healthBar.getSize().x <= 0){
-                        changeState = 3 ;
-                        currentState = GameState::Death;
-                    }
+
+
+                }
+                hit = collision(magicPillar, Playersprite.getPosition()) ;
+
+                if ( hit && invulnerabilitytimerMagicAttack <=0.0f) {
+                    if (currentphase==1)
+                        invulnerabilitytimerMagicAttack = 1.f ;
+                    shootSound.setVolume(soundVolume); //Sets volume of current selected menu volume (Haras)
+                    shootSound.play(); // Makes sound effect play when player gets hit (Haras)
+                    healthBarUpdate(healthBar , 30 - 5*(difficultyIndex-1));
+                    shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
+
+
+                }
+                if (healthBar.getSize().x <= 0){
+                    changeState = 3 ;
+                    currentState = GameState::Death;
+                }
+
+                if (bossCollision(activeProjectiles, Bosssprite.getPosition())&&currentphase==1){
+                    shootSound.setVolume(soundVolume);
+                    shootSound.play();
+                    shakeTimer = 0.3f;
+                    healthBarUpdate(bossHealth, 15 - 5* difficultyIndex) ;
+
+                }
+                if (bossHealth.getSize().x<=0&&currentphase==1) // integrated the boss defeating with new stage
+                {
+                    currentphase++;
+                    mapindex = 0;
+                    activeProjectiles.clear();
+                    magicPillar.clear();
+                    crystalBurst.clear();
+                    // the map is placed so that its BOTTOM edge sits on the bottom of the screen, because the track starts down there
+                    playerspawnmap(); // the wide start of the path is in the bottom centre of the map
                 }
 
                 // Dialogue box positioning
@@ -1360,16 +1744,22 @@ int main() {
             {
                 window.draw(mapsprite); // map only shows up in phase 2, it did not make for cool background in phase 1 tbh
             }
+
             window.draw(boundaryRect) ;
             window.draw(healthBar) ;
-            if (currentphase == 1)
-            {
-                window.draw(battleBox); // box only in phase 1, in phase 2 it would cover the track and it would be annoying. o7 battlebox
+            if (currentphase==1){
+                window.draw(battleBox);
                 window.draw(Bosssprite);
                 window.draw(speechBubble);
                 window.draw(speech);
+                window.draw(blazeRod);
+                window.draw(cooldownRing);
+                window.draw(cover) ;
+                window.draw(healthBoundary) ;
+                window.draw(bossHealth);
+                window.draw(bossName) ;
             }
-
+            window.draw(playerIcon) ;
 
             // draw the projectiles with the hazard trail
             for(const auto& pillar: magicPillar){
@@ -1391,6 +1781,12 @@ int main() {
                     hazardDot.setPosition(hazard.position);
                     window.draw(hazardDot);
                 }
+                if (proj.parried)
+                {
+                    projSprite.setColor(Color(255,255,0,200));
+                }
+                else
+                    projSprite.setColor(Color::White) ;
 
                 if (proj.spawnDelay <= 0.0f && (proj.isLaunched || proj.launchTimer > 0.0f)) {
                     projSprite.setPosition(proj.position);
@@ -1401,7 +1797,7 @@ int main() {
             // Draw Player on top
             window.draw(Playersprite);
 
-            if (healthBar.getSize().x <= 135 && healthBar.getSize().x >60 )
+            if (healthBar.getSize().x <= 135&& healthBar.getSize().x >60 )
             healthBar.setFillColor(sf::Color(243 , 156 , 18));
 
             if (healthBar.getSize().x<=60 && healthBar.getSize().x>0){
@@ -1413,13 +1809,14 @@ int main() {
             if(changeState==1){
                 menu_Interaction(window, view, currentState, hoveredIndex,
                     mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
-                    difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval, soundVolume, musicVolume, shakeIntesity);
+                    difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval,
+                    launchInterval, soundVolume, musicVolume, shakeIntesity, currentHeart , hearts , heartFiles, scaling , Playersprite , playerIcon);
 
                 bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
 
                 rendering(window, starBackground, currentState, titletext,
                     mainMenuItems,deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-                    DimScreen, Playersprite);
+                    DimScreen, Playersprite , currentHeart);
 
 
             }
@@ -1431,22 +1828,26 @@ int main() {
                 mapindex = 0;
                 invulnerabilitytimer = 0.0f; // no leftover i-frames
                 placemapstart(); // map back to start (bottom of the map on the bottom of the screen)
-                magicTimer.restart() ;
+
                 waveTriggerClock.restart(); //resets attack timings
-                burstTimer.restart();
-                burstDelay = 10.0f ;
-                crystalBurst.clear();
-                magicPillar.clear() ;
                 shakeTimer = 0.0f; // resets shakeTimer
-                healthBar.setSize({300.f,20.f});
+                healthBar.setSize({300.f,20.f})  ;
                 healthBar.setFillColor(Color(57,255,20));
+                bossHealth.setSize({500.f,20.f}) ;
+                magicTimer.restart() ;
+                burstTimer.restart() ;
+                magicPillar.clear() ;
+                crystalBurst.clear();
+                isParrying = false ;
+                cooldown = 0.f ;
 
+                burstDelay = 10.f ;
 
+                parryTimer = 0.0f ;
+                blazeRod.setColor(Color::White);
+                blazeRod.setRotation(degrees(0.0f)) ;
 
                 bgMusic.setVolume(musicVolume); //this allows live update from within settings menu
-
-
-
 
             }
 
