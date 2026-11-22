@@ -1069,8 +1069,8 @@ int main() {
     //load Sound which actually plays/makes sound (Haras)
     Sound shootSound(shootBuffer);
 
-    float soundVolume = 100.0f; // SF variable declaration (Haras)
-    float musicVolume = 50.0f; // BGM variable dec (Haras)
+    float soundVolume = 50.0f; // SF variable declaration, I lowered the default value (Haras)
+    float musicVolume = 20.0f; // BGM variable dec (Haras)
     float shakeIntesity = 2.0f; // Default pixel offset for SI, lowered it for smoother experience (Haras)
     float shakeTimer = 0.0f; // Will keep track of duration of active shake (Haras)
 
