@@ -1202,6 +1202,13 @@ int main()
 	{
 		return -1;
 	}
+	// cool phase 1 background (Haras)
+	Texture bgPhase1Tex;
+	if (!bgPhase1Tex.loadFromFile("Assets/bg_phase1.jpeg"))
+	{
+		return -1;
+	}
+	Sprite bgPhase1Sprite(bgPhase1Tex);
 	// Speech bubble setup
 	RectangleShape speechBubble({ 180.0f, 65.0f });
 	speechBubble.setFillColor(Color::White);
@@ -1935,6 +1942,11 @@ int main()
 
 			window.clear();
 			// Work required
+			// this background is draw first so everything else renders on top of it (Haras)
+			if (currentphase == 1)
+			{
+				window.draw(bgPhase1Sprite);
+			}
 			if (currentphase == 2)
 			{
 				window.draw(mapsprite); // map only shows up in phase 2, it did not make for cool background in phase 1 tbh
