@@ -19,7 +19,16 @@ enum class GameState
 	Settings,
 	Paused, // (Haras)
 	Death,
-	Shop
+	Shop,
+	Debug // (Haras)
+};
+// A DEBUG STATE YAYYYYYYYYYYYY (Haras)
+struct DebugState
+{
+	string input = "";
+	bool unlocked = false;
+	bool wrongPassword = false;
+	int jumpPhase = 0; // 0 means none selected and 1 or 2 or 3 = target phase
 };
 
 enum heartType
@@ -118,9 +127,9 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
 	int& difficultyIndex, const vector<string>& difficulties, const Font& font, int& changeState, GameState& previousState,
 	float& speed, float& projectileSpeed, float& waveInterval, float& launchInterval,
 	float& soundVolume, float& musicVolume, float& shakeIntensity, int& currentHeart, Texture& hearts, const vector<string>& heartFiles,
-	float scaling[], Sprite& playerSprite, Sprite& playerIcon)
+	float scaling[], Sprite& playerSprite, Sprite& playerIcon, DebugState& debug)
 { // (Haras)
-	// Making menu functional for soundvolume and musicvolume and shakeintensity changes (Haras)
+	// Making menu functional for soundvolume and musicvolume and shakeintensity changes, also added DEBUG state (Haras)
 	// gets new mouse pixel also works on all types / sizes of the screen
 
 	Vector2i mousePixel = Mouse::getPosition(window);
@@ -253,6 +262,25 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
 			}
 		}
 
+		// Typing password in Debug menu (Haras)
+		if (const auto* textEntered = event->getIf<Event::TextEntered>())
+		{
+			if (currentState == GameState::Debug && !debug.unlocked)
+			{
+				if (textEntered->unicode == 8) // Backspace
+				{
+					if (!debug.input.empty())
+						debug.input.pop_back();
+					debug.wrongPassword = false;
+				}
+				else if (textEntered->unicode >= 32 && textEntered->unicode < 127 && debug.input.size() < 16)
+				{
+					debug.input += static_cast<char>(textEntered->unicode);
+					debug.wrongPassword = false;
+				}
+			}
+		}
+
 		// ESC key press , return to previous stage
 		if (const auto* keyPressed = event->getIf<Event::KeyPressed>())
 		{
@@ -265,6 +293,13 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
 				else if (currentState == GameState::Settings)
 				{
 					currentState = previousState;
+				}
+				else if (currentState == GameState::Debug)
+				{
+					debug.input.clear();
+					debug.unlocked = false;
+					debug.wrongPassword = false;
+					currentState = GameState::Settings;
 				}
 				else if (currentState == GameState::Tutorial || currentState == GameState::Shop)
 				{
@@ -318,6 +353,53 @@ void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
 				else if (keyPressed->code == Keyboard::Key::S)
 				{
 					shakeIntensity = max(0.0f, shakeIntensity - 1.0f); // Decrease SI, if equals zero then feature is off
+				}
+				//  new debug menu YEAHHHH (Haras)
+				else if (keyPressed->code == Keyboard::Key::Tab)
+				{
+					debug.input.clear();
+					debug.unlocked = false;
+					debug.wrongPassword = false;
+					currentState = GameState::Debug;
+				}
+			}
+			else if (currentState == GameState::Debug)
+			{
+				if (!debug.unlocked)
+				{
+					if (keyPressed->code == Keyboard::Key::Enter)
+					{
+						if (debug.input == "1234") // this is the debug password SHHHHHH (Haras)
+						{
+							debug.unlocked = true;
+							debug.wrongPassword = false;
+							debug.input.clear();
+						}
+						else
+						{
+							debug.wrongPassword = true;
+							debug.input.clear();
+						}
+					}
+				}
+				else
+				{
+					int chosen = 0;
+					if (keyPressed->code == Keyboard::Key::Num1 || keyPressed->code == Keyboard::Key::Numpad1)
+						chosen = 1;
+					else if (keyPressed->code == Keyboard::Key::Num2 || keyPressed->code == Keyboard::Key::Numpad2)
+						chosen = 2;
+					else if (keyPressed->code == Keyboard::Key::Num3 || keyPressed->code == Keyboard::Key::Numpad3)
+						chosen = 3;
+
+					if (chosen != 0)
+					{
+						debug.jumpPhase = chosen;
+						debug.unlocked = false;
+						previousState = GameState::Playing;
+						currentState = GameState::Playing;
+						changeState = 2;
+					}
 				}
 			}
 			if (currentState == GameState::Shop)
@@ -459,10 +541,11 @@ void keys(RenderWindow& window, const Font& font, const string& newKey, Vector2f
 void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
 	const Text& titleText, const vector<Text>& mainMenuItems, vector<Text>& deathMenuItems,
 	const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
-	RectangleShape& dimBackground, const Sprite& playerSprite, int currentHeart)
+	RectangleShape& dimBackground, const Sprite& playerSprite, int currentHeart, const DebugState& debug)
 {
 	// rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras),
 	//  it has been edited for game end screen overhaul (Haras)
+	// it has also been edited for DEBUG meny (Haras)
 
 	if (currentState == GameState::Paused)
 	{
@@ -575,9 +658,42 @@ void rendering(RenderWindow& window, const VertexArray& starfield, GameState cur
 	else if (currentState == GameState::Settings)
 	{
 		// update static 100 % string to dynamically display variable deals with both SF, BGM, SI (Haras)
-		string settingsStr = " SETTINGS MENU \n\n[ Sound: " + to_string(static_cast<int>(soundVolume)) + "% ] <- Left/Right \n[ BGM: " + to_string(static_cast<int>(musicVolume)) + "% ] <- Up/Down\n[ Shake: " + to_string(static_cast<int>(shakeIntensity)) + " ] <- W/S\n\n[Controls:WASD + MOUSE]\n\n(Press ESC for Menu)";
+		string settingsStr = " SETTINGS MENU \n\n[ Sound: " + to_string(static_cast<int>(soundVolume)) + "% ] <- Left/Right \n[ BGM: " + to_string(static_cast<int>(musicVolume)) + "% ] <- Up/Down\n[ Shake: " + to_string(static_cast<int>(shakeIntensity)) + " ] <- W/S\n[ Debug Mode ] <- Press TAB\n\n[Controls:WASD + MOUSE]\n\n(Press ESC for Menu)";
 		Text settingsText = createCenteredText(font, settingsStr, 22, { 400.f, 300.f }, Color::White);
 		window.draw(settingsText);
+	}
+	//This is all for for debug menu implementation (Haras)
+	else if (currentState == GameState::Debug)
+	{
+		if (!debug.unlocked)
+		{
+			Text title = createCenteredText(font, "DEBUG ACCESS", 38, { 400.f, 160.f }, Color::Yellow);
+			Text prompt = createCenteredText(font, "Enter Password (Press ENTER):", 22, { 400.f, 240.f }, Color::White);
+
+			string masked(debug.input.size(), '*');
+			Text passText = createCenteredText(font, "[ " + masked + "_ ]", 28, { 400.f, 305.f }, Color::Cyan);
+
+			window.draw(title);
+			window.draw(prompt);
+			window.draw(passText);
+
+			if (debug.wrongPassword)
+			{
+				Text err = createCenteredText(font, "WRONG PASSWORD", 20, { 400.f, 365.f }, Color(255, 50, 50));
+				window.draw(err);
+			}
+
+			Text back = createCenteredText(font, "(Press ESC to Return)", 20, { 400.f, 450.f }, Color(180, 180, 180));
+			window.draw(back);
+		}
+		else
+		{
+			Text title = createCenteredText(font, "DEBUG - SELECT PHASE", 34, { 400.f, 150.f }, Color::Yellow);
+			string phases = "[ 1 ] Phase 1 - Boss Waves\n\n[ 2 ] Phase 2 - Lava Track\n\n[ 3 ] Phase 3 - Parry Boss\n\n(Press ESC to Return)";
+			Text phaseText = createCenteredText(font, phases, 24, { 400.f, 330.f }, Color::White);
+			window.draw(title);
+			window.draw(phaseText);
+		}
 	}
 	else if (currentState == GameState::Death)
 	{ // game end screen overhaul (Haras)
@@ -1522,7 +1638,7 @@ int main()
 			speech.setString("Testing 12-step sequence");
 
 			// restore phase one boss sprite (Haras)
-			Bosssprite.setTexture(texture3);
+			Bosssprite.setTexture(texture3, true);       // resets bounding box back to phase 1 size (Haras)
 			FloatRect p1Bounds = Bosssprite.getLocalBounds();
 			Bosssprite.setOrigin({ p1Bounds.size.x / 2.f, p1Bounds.size.y / 2.f });
 		};
@@ -1544,7 +1660,7 @@ int main()
 			blazeRod.setRotation(degrees(0.0f));
 			phase3Clock.restart();
 			speech.setString("SPACE to deflect!");
-			Bosssprite.setTexture(bossphase3tex);
+			Bosssprite.setTexture(bossphase3tex, true); // reset bounding box for the new boss sprite (Haras)
 			FloatRect p3Bounds = Bosssprite.getLocalBounds();
 			Bosssprite.setOrigin({ p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f });
 		};
@@ -1558,6 +1674,7 @@ int main()
 	// used to change current state of game from menu too playing ;
 	// change this and add an endless mode also make it go back to menu if escape pressed during the playing stage
 	int changeState = 0;
+	DebugState debug; // for debug menu (Haras)
 
 	// load SoundBuffer before while window.isOpen loop, so it only loads once (Haras)
 	SoundBuffer shootBuffer;
@@ -1599,7 +1716,7 @@ int main()
 			menu_Interaction(window, view, currentState, hoveredIndex,
 				mainMenuItems, deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
 				difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval,
-				soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon);
+				soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon, debug);
 
 			bgMusic.setVolume(musicVolume); // this allows live update from within settings menu
 
@@ -1643,13 +1760,37 @@ int main()
 			// integrated soundvolume and musicVolume variable
 			rendering(window, starBackground, currentState, titletext, mainMenuItems, deathMenuItems,
 				startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume,
-				musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart);
+				musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug);
 			window.display();
 		}
 		else
 		{
 			if (changeState == 2)
-			{
+			{ // for deebug menu (Haras)
+				if (debug.jumpPhase != 0)
+				{
+					healthBar.setSize({ 300.f, 20.f });
+					healthBar.setFillColor(Color(57, 255, 20));
+					shakeTimer = 0.0f;
+
+					if (debug.jumpPhase == 1)
+					{
+						resetToPhase1();
+					}
+					else if (debug.jumpPhase == 2)
+					{
+						resetToPhase1();
+						currentphase = 2;
+						mapindex = 0;
+						playerspawnmap();
+					}
+					else if (debug.jumpPhase == 3)
+					{
+						enterPhase3();
+					}
+					debug.jumpPhase = 0;
+				}
+
 				while (const optional<Event> event = window.pollEvent())
 				{
 					if (event->is<Event::Closed>())
@@ -2143,13 +2284,13 @@ int main()
 				menu_Interaction(window, view, currentState, hoveredIndex,
 					mainMenuItems, deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
 					difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval,
-					launchInterval, soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon);
+					launchInterval, soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon, debug);
 
 				bgMusic.setVolume(musicVolume); // this allows live update from within settings menu
 
 				rendering(window, starBackground, currentState, titletext,
 					mainMenuItems, deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-					DimScreen, Playersprite, currentHeart);
+					DimScreen, Playersprite, currentHeart, debug);
 			}
 			if (changeState == 3)
 			{
