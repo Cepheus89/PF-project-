@@ -1286,16 +1286,16 @@ int main()
 	battleBox.setOrigin({ 380.0f / 2.0f, 120.0f / 2.0f });
 	battleBox.setPosition({ width / 2.0f, height / 2.0f + 100.0f });
 
-	// health bar
+	// health bar (location changed, centering done (Haras))
 	RectangleShape healthBar({ 300.f, 20.f });
 	healthBar.setOrigin({ 150.f, 10.f });
-	healthBar.setPosition({ 235.0f, 30.0f });
+	healthBar.setPosition({ width / 2.0f, 510.0f });
 	healthBar.setFillColor(Color(57, 255, 20));
 
-	// health bar boundary and underneath
+	// health bar boundary and underneath (location changed, centering done (Haras))
 	RectangleShape boundaryRect({ 300.0f, 20.0f });
-	boundaryRect.setOrigin({ 150.f, 10.0f });
-	boundaryRect.setPosition({ 235.0f, 30.0f });
+	boundaryRect.setOrigin({ 150.f, 10.f });
+	boundaryRect.setPosition({ width / 2.0f, 510.0f });
 	boundaryRect.setFillColor(sf::Color(190, 44, 35));
 	boundaryRect.setOutlineThickness(4.f);
 	boundaryRect.setOutlineColor(sf::Color(140, 90, 43));
@@ -1373,12 +1373,12 @@ int main()
 	Playersprite.setOrigin({ playerbounds.size.x / 2.0f, playerbounds.size.y / 2.0f });
 	Playersprite.setPosition(battleBox.getPosition());
 
-	// playerIcon beside the screen
+	// playerIcon next to updated health bar location (Haras)
 	Sprite playerIcon(hearts);
 	playerIcon.setScale({ scaling[currentHeart], scaling[currentHeart] });
 
 	playerIcon.setOrigin({ playerbounds.size.x / 2.f, playerbounds.size.y / 2.0f });
-	playerIcon.setPosition({ 25.f, 30.f });
+	playerIcon.setPosition({ 225.f, 510.f });
 
 	// Indicator of parry with icon
 	CircleShape cooldownRing({ 15.f });
