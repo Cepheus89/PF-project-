@@ -682,11 +682,12 @@ void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShap
 	// we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
 	Vector2f pos = playerSprite.getPosition(); // apparently the SFML library already has x and y stored so it doesn't need you to declare them. Cool ig
 
-	// ok so phase 2 was being difficult and I wanted to be a bit kinder to the players so Im making the changes that the up and down speed is slower compared ot the left and right speed, no need to (not) thank me
+	// ok so phase 2 was being difficult and I wanted to be a bit kinder to the players so Im making the changes that the up and down speed is slower compared ot the left and right speed, no need to (not) thank me (Bazil)
+	// but it got too slow (0.6f) so i upped it to 0.8
 	float verticalSpeed = speed;
 	if (!useBox) // 
 	{
-		verticalSpeed = speed * 0.6f;
+		verticalSpeed = speed * 0.8f;
 	}
 
 	// the movement stuff is self explanatory except one thing which I wrote down
@@ -1656,7 +1657,7 @@ int main()
 				float mapscrollspeed = 40.0f;
 				if (currentphase == 2) // must ONLY happen in the 2nd wave
 				{
-					// keeps player on  path if the scrolling top wall pushes into them (Haras)
+					// keeps player on  path if the scrolling top wall pushes into them, also fixed a bug where if map push you out of path, it was not allowing you to move, keeping you stuck (Haras)
 					float oldMapY = mapsprite.getPosition().y;
 					// the following code is cuz omg I didn't include this and the map scrolled off the screen AND IT CONSIDERED IT OUT OF BOUNDS AND I WAS DYING AAAA
 					mapsprite.move({ 0.0f, mapscrollspeed * dt });
@@ -1664,14 +1665,43 @@ int main()
 					{
 						mapsprite.setPosition({ mapsprite.getPosition().x, 0.0f });
 					}
-					// keeps player on  path if the scrolling top wall pushes into them (Haras)
+					// keeps player on  path if the scrolling top wall pushes into them, also fixed a bug where if map push you out of path, it was not allowing you to move, keeping you stuck (Haras)
+			// keeps player on path if the scrolling wall pushes into them (Haras)
 					float scrollDelta = mapsprite.getPosition().y - oldMapY;
-					if (scrollDelta > 0.0f && mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition()))
+					if (mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition()))
 					{
-						Vector2f p = Playersprite.getPosition();
-						p.y = min(static_cast<float>(height) - 8.0f, p.y + scrollDelta);
-						Playersprite.setPosition(p);
 						hitwallphase2 = true;
+						Vector2f p = Playersprite.getPosition();
+						bool recovered = false;
+						// tries riding down with the map scroll (Haras)
+						if (scrollDelta > 0.0f && p.y + scrollDelta <= height - 8.0f &&
+							!mapcollission(mapImages[mapindex], mapsprite, { p.x, p.y + scrollDelta }))
+						{
+							p.y += scrollDelta;
+							Playersprite.setPosition(p);
+							recovered = true;
+						}
+
+						// nudge player slightly to nearby stone if squeeze by a curved angled edge (Haras)
+						if (!recovered)
+						{
+							for (float r = 2.0f; r <= 12.0f && !recovered; r += 2.0f) {
+								Vector2f offsets[4] = {{0.f,-r},{0.f,r},{-r, 0.f},{r,0.f}};
+								for (auto off : offsets) {
+									Vector2f testPos = p + off;
+									if (testPos.x >= 8.f && testPos.x <= width - 8.f && testPos.y >= 8.f && testPos.y <= height - 8.f && !mapcollission(mapImages[mapindex], mapsprite, testPos)) {
+										Playersprite.setPosition(testPos);
+										recovered = true;
+										break;
+									}
+								}
+							}
+						}
+						// crushed off the bottom edge scenario: reset current map so player canot get trapped
+						if (!recovered)
+						{
+							playerspawnmap();
+						}
 					}
 
 					if (mapsprite.getPosition().y >= 0.0f)
