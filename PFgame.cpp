@@ -1639,6 +1639,7 @@ int main()
 
 			// restore phase one boss sprite (Haras)
 			Bosssprite.setTexture(texture3, true);       // resets bounding box back to phase 1 size (Haras)
+			Bosssprite.setScale({ 0.1f, 0.1f }); // boss scaling (Haras)
 			FloatRect p1Bounds = Bosssprite.getLocalBounds();
 			Bosssprite.setOrigin({ p1Bounds.size.x / 2.f, p1Bounds.size.y / 2.f });
 		};
@@ -1663,6 +1664,8 @@ int main()
 			Bosssprite.setTexture(bossphase3tex, true); // reset bounding box for the new boss sprite (Haras)
 			FloatRect p3Bounds = Bosssprite.getLocalBounds();
 			Bosssprite.setOrigin({ p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f });
+			float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y); // fixed cipping (Haras)
+			Bosssprite.setScale({ p3Scale, p3Scale }); // fixed cipping (Haras)
 		};
 
 	// Hazard trail dot shape
@@ -2157,9 +2160,9 @@ int main()
 					playerspawnmap(); // the wide start of the path is in the bottom centre of the map
 				}
 
-				// Dialogue box positioning
+				// Dialogue box positioning Changed to prevent clipping (Haras)
 				Vector2f bossPos = Bosssprite.getPosition();
-				Vector2f bubbleOffset(65.0f, -35.0f);
+				Vector2f bubbleOffset(Bosssprite.getGlobalBounds().size.x / 2.0f + 12.0f, -35.0f);
 
 				speechBubble.setPosition(bossPos + bubbleOffset);
 				speech.setPosition(speechBubble.getPosition() + Vector2f(10.0f, 8.0f));
@@ -2198,8 +2201,9 @@ int main()
 			window.draw(healthBar);
 			if (currentphase == 1 || currentphase == 3)
 			{
-				window.draw(battleBox);
+				//Chaged order so boss can cut into battlebox
 				window.draw(Bosssprite);
+				window.draw(battleBox);
 				window.draw(speechBubble);
 				window.draw(speech);
 				window.draw(healthBoundary);
