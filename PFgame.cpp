@@ -1062,32 +1062,39 @@ bool bossCollision(const vector<Projectile>& activeProjectiles, Vector2f bossPos
 	return false;
 }
 
+// phase 3 boss throw attack (Haras)
+void bossThrow(vector<Projectile>& activeProjectiles, Vector2f bossPos) {
+	Projectile proj;
+	proj.position = bossPos;
+	proj.isLaunched = false;
+	proj.launchTimer = 0.4f; // short charge telegraph before throwing
+	proj.tracksPlayer = true;
+	proj.leavesTrail = false;
+	proj.hitBox = 12.f;
+	activeProjectiles.push_back(proj);
+}
+
 void parryProj(vector<Projectile>& Projectile, Vector2f playerPos, Vector2f bossPos)
 {
-
-	// For all projectiles
 	for (auto& proj : Projectile)
 	{
-		if (proj.isLaunched)
+		if (proj.isLaunched && !proj.parried)
 		{
-			// calculating right distance for parry
-
 			float dx = playerPos.x - proj.position.x;
 			float dy = playerPos.y - proj.position.y;
-			if (sqrt(dx * dx + dy * dy) <= 28.f && sqrt(dx * dx + dy * dy) >= 12.f && dy >= 0)
+			float dist = sqrt(dx * dx + dy * dy);
+			if (dist <= 45.f && dy >= -15.f)
 			{
 				proj.tracksPlayer = false;
-				// go to boss back
+				proj.steeringtime = 0.0f;
 
 				Vector2f bossDisplacement = { bossPos.x - proj.position.x, bossPos.y - proj.position.y };
-				// current projectile differce from boss
 				float length = sqrt(bossDisplacement.x * bossDisplacement.x + bossDisplacement.y * bossDisplacement.y);
-				if (length != 0)
+				if (length != 0.0f)
 				{
-					bossDisplacement /= length; // this is for unit vector so we can give new speed
+					bossDisplacement /= length;
 				}
-				proj.velocity = bossDisplacement * 20.0f;
-
+				proj.velocity = bossDisplacement * 25.0f;
 				proj.parried = true;
 			}
 		}
@@ -1100,27 +1107,22 @@ void updateParrying(Sprite& blazeRod, const Sprite& playerSprite, Vector2f bossP
 	vector<Projectile>& activeProjectiles, vector<Projectile>& crystalBurst,
 	bool& isParrying, float& parryTimer, float& cooldown, float dt)
 {
-	// keeps balze rod by the side of player
 	blazeRod.setPosition({ playerSprite.getPosition().x + 5.f, playerSprite.getPosition().y + 6.0f });
 
 	if (isParrying)
 	{
-		// finds time passed since button press
 		parryTimer += dt;
 
-		float progress = parryTimer / 0.15;                                // ratio of full swing
-		parryProj(activeProjectiles, playerSprite.getPosition(), bossPos); // calls the function so the projectile is redirected if hit exact
-		// if swing complete reset
+		float progress = parryTimer / 0.15f;
+		parryProj(activeProjectiles, playerSprite.getPosition(), bossPos);
 		if (progress >= 1.0f)
 		{
 			isParrying = false;
 			blazeRod.setRotation(degrees(0));
-			cooldown = 2.15f; // if you parry can not parry for next 2 seconds//THis also includes
-			// the Motion of the swing of parry
+			cooldown = 0.9f;
 		}
 		else
 		{
-			// else set new rotation
 			float newAngle = -140.f * progress;
 			blazeRod.setRotation(degrees(newAngle));
 		}
@@ -1128,14 +1130,12 @@ void updateParrying(Sprite& blazeRod, const Sprite& playerSprite, Vector2f bossP
 	if (cooldown > 0.0f)
 	{
 		cooldown -= dt;
-		// dim it
 		blazeRod.setColor(Color(120, 120, 120, 100));
-		// New position of cover
-		cover.setPosition({ icon1.getPosition().x, icon1.getPosition().y + (40 - cooldown * 20.f) });
+		float ratio = max(0.0f, cooldown / 0.9f);
+		cover.setPosition({ icon1.getPosition().x, icon1.getPosition().y + (40.f - ratio * 40.f) });
 		cover.setFillColor(Color::Black);
-		cooldownRing.setOutlineColor(Color(255, 255 - 255 * cooldown / 2.15, 0));
+		cooldownRing.setOutlineColor(Color(255, static_cast<uint8_t>(255.f * (1.0f - ratio)), 0));
 	}
-	//
 	else
 	{
 		blazeRod.setColor(Color::White);
@@ -1424,6 +1424,7 @@ int main()
 	Clock shootyclock; // for the projectiles (Bazil)
 	// for falling crystal
 	Clock burstTimer;
+	Clock phase3Clock; // phase three throw timer (Haras)
 
 	float burstDelay = 10.0f;
 
@@ -1506,8 +1507,32 @@ int main()
 			shootyclock.restart();
 			magicTimer.restart();
 			burstTimer.restart();
+			phase3Clock.restart(); // phase 3 (Haras)
 			bossHealth.setSize({ 500.0f, 20.0f });
 			invulnerabilitytimerMagicAttack = 0.0f;
+			isParrying = false; // phase 3 (Haras)
+			cooldown = 0.0f; // phase 3 (Haras)
+			parryTimer = 0.0f; // phase 3 (Haras)
+			speech.setString("Testing 12-step sequence");
+		};
+	// phase 3 (Haras)
+	auto enterPhase3 = [&]()
+		{
+			currentphase = 3;
+			Playersprite.setPosition(battleBox.getPosition());
+			activeProjectiles.clear();
+			magicPillar.clear();
+			crystalBurst.clear();
+			playershooting.clear();
+			bossHealth.setSize({ 500.0f, 20.0f });
+			invulnerabilitytimer = 1.0f;
+			isParrying = false;
+			cooldown = 0.0f;
+			parryTimer = 0.0f;
+			blazeRod.setColor(Color::White);
+			blazeRod.setRotation(degrees(0.0f));
+			phase3Clock.restart();
+			speech.setString("SPACE to deflect!");
 		};
 
 	// Hazard trail dot shape
@@ -1658,11 +1683,6 @@ int main()
 					Playersprite.setPosition(newpos);
 				}
 
-				if (currentphase == 3) {
-					updateParrying(blazeRod, Playersprite, Bosssprite.getPosition(), playerIcon,
-						cooldownRing, cover, activeProjectiles, crystalBurst,
-						isParrying, parryTimer, cooldown, dt);
-				}
 				// the speed of the map scroll cuz, yeah
 				float mapscrollspeed = 40.0f;
 				if (currentphase == 2) // must ONLY happen in the 2nd wave
@@ -1729,7 +1749,7 @@ int main()
 							}
 							else
 							{
-								resetToPhase1();
+								enterPhase3();
 							}
 						}
 					}
@@ -1841,11 +1861,30 @@ int main()
 					playershooting.push_back(s);
 				}
 
+				// boss throws projectiles at player to deflect (Haras)
+				if (currentphase == 3)
+				{
+					float throwInterval = 1.8f - 0.25f * difficultyIndex; // 1.8 seconds for easy, 1.5 seconds Normal, 1.3 seconds for Bullet Hell
+					if (phase3Clock.getElapsedTime().asSeconds() >= throwInterval)
+					{
+						bossThrow(activeProjectiles, Bosssprite.getPosition());
+						phase3Clock.restart();
+					}
+				}
+
 				// update the projectiles
 				updateProjectiles(crystalBurst, dt, width, height, Playersprite.getPosition(), 12.f - 5 * (difficultyIndex - 1));
 				updateProjectiles(magicPillar, dt, width, height, Playersprite.getPosition(), 12.f - 5 * (difficultyIndex - 1));
-				updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), projectileSpeed);
+				updateProjectiles(activeProjectiles, dt, width, height, Playersprite.getPosition(), currentphase == 3 ? projectileSpeed * 0.55f : projectileSpeed);
 				updateProjectiles(playershooting, dt, width, height, Playersprite.getPosition(), 0.f); // for the players own projectiles cuz I made the game easier praise me
+
+				// run parrying after projectiles move so swings deflect before any collision triggers (Haras)
+				if (currentphase == 3) {
+					updateParrying(blazeRod, Playersprite, Bosssprite.getPosition(), playerIcon,
+						cooldownRing, cover, activeProjectiles, crystalBurst,
+						isParrying, parryTimer, cooldown, dt);
+				}
+
 				// counts down the i-frames
 				if (invulnerabilitytimer > 0.0f || invulnerabilitytimerMagicAttack > 0.0f)
 				{
@@ -1853,9 +1892,52 @@ int main()
 					invulnerabilitytimerMagicAttack -= dt;
 				}
 
+				// Check deflected boss hits, direct player hits, and missed deflects (Haras)
+				if (currentphase == 3)
+				{
+					float boxBottom = battleBox.getPosition().y + battleBox.getSize().y / 2.0f + 10.0f;
+					for (int i = 0; i < (int)activeProjectiles.size();)
+					{
+						Projectile& p = activeProjectiles[i];
+						if (p.parried && Bosssprite.getGlobalBounds().contains(p.position)) {
+							healthBarUpdate(bossHealth, 50.f); // 10 deflects needed to beat Phase 3
+							shootSound.setVolume(soundVolume);
+							shootSound.play();
+							activeProjectiles.erase(activeProjectiles.begin() + i);
+						}
+						else if (!p.parried && p.isLaunched) {
+							float dx = Playersprite.getPosition().x - p.position.x;
+							float dy = Playersprite.getPosition().y - p.position.y;
+							bool hitPlayer = sqrt(dx * dx + dy * dy) < p.hitBox;
+							bool missedDeflect = p.position.y > boxBottom;
+
+							if (hitPlayer || missedDeflect) {
+								shootSound.setVolume(soundVolume);
+								shootSound.play();
+								healthBarUpdate(healthBar, 15.f);
+								shakeTimer = 0.3f;
+								activeProjectiles.erase(activeProjectiles.begin() + i);
+							}
+							else
+							{
+								i++;
+							}
+						}
+						else
+						{
+							i++;
+						}
+					}
+
+					if (bossHealth.getSize().x <= 0)
+					{
+						resetToPhase1(); // loops back after beating Phase 3 ( will replace with a VICTORY screen later)
+					}
+				}
+
 				// check the collissins of they happen brrrr (Bazil)
 				// only ONE collision check per frame, map collision only counts in phase 2
-				bool hit = collision(activeProjectiles, Playersprite.getPosition()) ||
+				bool hit = (currentphase != 3 && collision(activeProjectiles, Playersprite.getPosition())) ||
 					collision(crystalBurst, Playersprite.getPosition());
 				if (currentphase == 2)
 				{ // also ensured hitcount even when hit boundary (Haras)
@@ -1873,6 +1955,8 @@ int main()
 					healthBarUpdate(healthBar, 15 - 3 * (difficultyIndex - 1));
 					shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
 				}
+
+
 				hit = collision(magicPillar, Playersprite.getPosition());
 
 				if (hit && invulnerabilitytimerMagicAttack <= 0.0f)
@@ -1946,7 +2030,7 @@ int main()
 			window.clear();
 			// Work required
 			// this background is draw first so everything else renders on top of it (Haras)
-			if (currentphase == 1)
+			if (currentphase == 1 || currentphase == 3)
 			{
 				window.draw(bgPhase1Sprite);
 			}
@@ -1957,7 +2041,7 @@ int main()
 
 			window.draw(boundaryRect);
 			window.draw(healthBar);
-			if (currentphase == 1)
+			if (currentphase == 1 || currentphase == 3)
 			{
 				window.draw(battleBox);
 				window.draw(Bosssprite);
@@ -1966,6 +2050,12 @@ int main()
 				window.draw(healthBoundary);
 				window.draw(bossHealth);
 				window.draw(bossName);
+			}
+			// for phase 3 (Haras)
+			if (currentphase == 3)
+			{
+				window.draw(cooldownRing);
+				window.draw(cover);
 			}
 			window.draw(playerIcon);
 
@@ -2017,6 +2107,12 @@ int main()
 
 			// Draw Player on top
 			window.draw(Playersprite);
+			// phase 3 draw blaze rod (phase 3)
+			if (currentphase == 3)
+			{
+				window.draw(blazeRod);
+			}
+
 
 			if (healthBar.getSize().x <= 135 && healthBar.getSize().x > 60)
 				healthBar.setFillColor(sf::Color(243, 156, 18));
