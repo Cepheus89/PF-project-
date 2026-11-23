@@ -1198,7 +1198,13 @@ int main()
 		return -1;
 	}
 	Texture texture3;
-	if (!texture3.loadFromFile("Assets/Bosssprite.png"))
+	if (!texture3.loadFromFile("Assets/boss_sprite_phase1.png"))
+	{
+		return -1;
+	}
+	// for phase3 (Haras)
+	Texture bossphase3tex;
+	if (!bossphase3tex.loadFromFile("Assets/boss_sprite_phase3.jpg"))
 	{
 		return -1;
 	}
@@ -1514,6 +1520,11 @@ int main()
 			cooldown = 0.0f; // phase 3 (Haras)
 			parryTimer = 0.0f; // phase 3 (Haras)
 			speech.setString("Testing 12-step sequence");
+
+			// restore phase one boss sprite (Haras)
+			Bosssprite.setTexture(texture3);
+			FloatRect p1Bounds = Bosssprite.getLocalBounds();
+			Bosssprite.setOrigin({ p1Bounds.size.x / 2.f, p1Bounds.size.y / 2.f });
 		};
 	// phase 3 (Haras)
 	auto enterPhase3 = [&]()
@@ -1533,6 +1544,9 @@ int main()
 			blazeRod.setRotation(degrees(0.0f));
 			phase3Clock.restart();
 			speech.setString("SPACE to deflect!");
+			Bosssprite.setTexture(bossphase3tex);
+			FloatRect p3Bounds = Bosssprite.getLocalBounds();
+			Bosssprite.setOrigin({ p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f });
 		};
 
 	// Hazard trail dot shape
