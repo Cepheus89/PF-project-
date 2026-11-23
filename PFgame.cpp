@@ -801,7 +801,7 @@ void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShap
 	// ok so phase 2 was being difficult and I wanted to be a bit kinder to the players so Im making the changes that the up and down speed is slower compared ot the left and right speed, no need to (not) thank me (Bazil)
 	// but it got too slow (0.6f) so i upped it to 0.8
 	float verticalSpeed = speed;
-	if (!useBox) // 
+	if (!useBox) //
 	{
 		verticalSpeed = speed * 0.8f;
 	}
@@ -1324,6 +1324,12 @@ int main()
 	{
 		return -1;
 	}
+	Texture bossStage2 ;
+	bossStage2.loadFromFile("Assets/bossStage2.png") ;
+
+	Texture bossFinalStage;
+	bossFinalStage.loadFromFile("Assets/bossFinalStage.png");
+
 	// cool phase 1 background (Haras)
 	Texture bgPhase1Tex;
 	if (!bgPhase1Tex.loadFromFile("Assets/bg_phase1.jpeg"))
@@ -1750,6 +1756,12 @@ int main()
 					cooldown = 0.f;
 					placemapstart(); // map back to start (bottom of the map on the bottom of the screen)
 
+					Bosssprite.setTexture(texture3, true) ;
+					FloatRect bounds =Bosssprite.getLocalBounds();
+					Bosssprite.setOrigin({ bounds.size.x/2.f ,bounds.size.y /2.f});
+					Bosssprite.setScale({0.1f, 0.1f});
+					Bosssprite.setPosition({width/ 2.0f,240.0f}) ;
+
 					burstDelay = 10.f;
 
 					parryTimer = 0.0f;
@@ -1842,7 +1854,7 @@ int main()
 				}
 
 				// the speed of the map scroll cuz, yeah
-				float mapscrollspeed = 40.0f;
+				float mapscrollspeed = 30.0f-5*(difficultyIndex - 1 );
 				if (currentphase == 2) // must ONLY happen in the 2nd wave
 				{
 					// keeps player on  path if the scrolling top wall pushes into them, also fixed a bug where if map push you out of path, it was not allowing you to move, keeping you stuck (Haras)
@@ -2007,7 +2019,36 @@ int main()
 
 						burstTimer.restart();
 					}
+
+
+				// Change Phase 1 boss sprite based on remaining HP (max bar width = 500.f)
+					float hp = bossHealth.getSize().x;
+					if (hp <= 150.0f) // final thidhealth
+					{
+						Bosssprite.setTexture(bossFinalStage, true);
+						FloatRect b = Bosssprite.getLocalBounds();
+						Bosssprite.setOrigin({ b.size.x / 2.f, b.size.y / 2.f });
+						Bosssprite.setScale({ 0.14f, 0.14f });      // Adjust scale for bossFinalStage.png
+						Bosssprite.setPosition({ width / 2.0f, 230.0f });
+					}
+					else if (hp <= 300.0f) // below 60-30 stage 2 ;
+					{
+						Bosssprite.setTexture(bossStage2, true);
+						FloatRect b = Bosssprite.getLocalBounds();
+						Bosssprite.setOrigin({ b.size.x / 2.f, b.size.y / 2.f });
+						Bosssprite.setScale({ 0.12f, 0.12f });      // Adjust scale for bossStage2.png
+						Bosssprite.setPosition({ width / 2.0f, 235.0f });
+					}
+					else // defualt when hp above 60%
+					{
+						Bosssprite.setTexture(texture3, true);
+						FloatRect b = Bosssprite.getLocalBounds();
+						Bosssprite.setOrigin({ b.size.x / 2.f, b.size.y / 2.f });
+						Bosssprite.setScale({ 0.1f, 0.1f });
+						Bosssprite.setPosition({ width / 2.0f, 240.0f });
+					}
 				}
+
 				if (currentphase == 1 && Keyboard::isKeyPressed(Keyboard::Key::Space) && shootyclock.getElapsedTime().asSeconds() >= 0.25f) //shooting them projectiles rahhh. The 0.25 is to put the delay between each projectile so we don't become a minigun (teammates would never approve of the minigun tis so sad :[ )
 				{
 					shootyclock.restart();
@@ -2093,31 +2134,44 @@ int main()
 					}
 				}
 
-				// check the collissins of they happen brrrr (Bazil)
-				// only ONE collision check per frame, map collision only counts in phase 2
-				bool hit = (currentphase != 3 && collision(activeProjectiles, Playersprite.getPosition())) ||
+				// Separate projectile hits from Phase 2 map collisions
+				bool projHit=( currentphase!= 3&&collision(activeProjectiles ,Playersprite.getPosition())) ||
 					collision(crystalBurst, Playersprite.getPosition());
-				if (currentphase == 2)
-				{ // also ensured hitcount even when hit boundary (Haras)
-					hit = hit || hitwallphase2 || mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition());
-				}
-				// should this be removed ???
-				if (hit && invulnerabilitytimer <= 0.0f)
+
+				bool mapHit= (currentphase == 2 ) &&
+					(hitwallphase2 ||mapcollission(mapImages[mapindex],  mapsprite,Playersprite.getPosition()));
+
+				if ((projHit||mapHit) && invulnerabilitytimer <= 0.0f)
 				{
+					float damage =0.0f ;
+
+					if (projHit)
+					{
+						// Keep full projectile damage unchanged
+						damage=15.f- 3.f* (difficultyIndex -1 ) ;
+					}
+					else if( mapHit )
+					{
+						// Lower damage only for Phase 2 map collisions (adjust 6.f to whatever value you prefer)
+						damage = 6.f;
+					}
+
 					if (currentphase == 1)
 						invulnerabilitytimer = 1.0f; // frames where you can't get hit again
 					if (currentphase == 2)
 						invulnerabilitytimer = 2.0f;   // for the 2nd phase
+
 					shootSound.setVolume(soundVolume); // Sets volume of current selected menu volume (Haras)
 					shootSound.play();                 // Makes sound effect play when player gets hit (Haras)
-					healthBarUpdate(healthBar, 15 - 3 * (difficultyIndex - 1));
+					healthBarUpdate(healthBar, damage);
 					shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
 				}
 
 
-				hit = collision(magicPillar, Playersprite.getPosition());
 
-				if (hit && invulnerabilitytimerMagicAttack <= 0.0f)
+				projHit = collision(magicPillar, Playersprite.getPosition());
+
+				if (projHit && invulnerabilitytimerMagicAttack <= 0.0f)
 				{
 					if (currentphase == 1)
 						invulnerabilitytimerMagicAttack = 1.f;
@@ -2126,6 +2180,8 @@ int main()
 					healthBarUpdate(healthBar, 30 - 5 * (difficultyIndex - 1));
 					shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
 				}
+
+
 				if (healthBar.getSize().x <= 0)
 				{
 					changeState = 3;
@@ -2255,7 +2311,7 @@ int main()
 					window.draw(projSprite);
 				}
 			}
-			//draw each of the player's shots 
+			//draw each of the player's shots
 			for (const auto& shot : playershooting)
 			{
 				Sprite s = Playersprite;
@@ -2327,6 +2383,12 @@ int main()
 				blazeRod.setRotation(degrees(0.0f));
 
 				bgMusic.setVolume(musicVolume); // this allows live update from within settings menu
+				//reseting sprites scale etc
+				Bosssprite.setTexture(texture3, true) ;
+                FloatRect bounds =Bosssprite.getLocalBounds();
+                Bosssprite.setOrigin({ bounds.size.x/2.f ,bounds.size.y /2.f});
+                Bosssprite.setScale({0.1f, 0.1f});
+                Bosssprite.setPosition({width/ 2.0f,240.0f}) ;
 			}
 
 			window.display();
