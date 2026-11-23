@@ -1459,6 +1459,16 @@ int main()
     {
         return -1;
     }
+    Texture playerProj ;
+    if (!playerProj.loadFromFile(("Assets/flame attack.png")))
+        return -1 ;
+    Sprite playerShot(playerProj) ;
+    Vector2u shootSize = playerProj.getSize();
+    playerShot.setScale({0.5f,0.5f}) ;
+    playerShot.setOrigin({shootSize.x/2.f , shootSize.y/2.f }) ;
+
+
+    //magic attack sprite setup
     Sprite MagicAttack(magic);
     MagicAttack.setTexture(magic);
     MagicAttack.setScale({5.f, 5.f});
@@ -1532,6 +1542,9 @@ int main()
 
     int currentphase = 1;              // the phase we're at, duh
     float invulnerabilitytimer = 0.0f; // invincibility frames cuz im generous :)
+
+    bool passiveHeal = false ; //heal for boss when health reaches low
+
 
     // Projectile sprite template
     Sprite projSprite(texture2);
@@ -2160,13 +2173,17 @@ int main()
 
                     // Change Phase 1 boss sprite based on remaining HP (max bar width = 500.f)
                     float hp = bossHealth.getSize().x;
-                    if (hp <= 150.0f) // final third health
+
+                    if (hp <= 150.0f&&hp|| passiveHeal == true ) // final third health
                     {
                         Bosssprite.setTexture(bossFinalStage, true);
                         FloatRect b = Bosssprite.getLocalBounds();
                         Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
                         Bosssprite.setScale({0.14f, 0.14f}); // Adjust scale for bossFinalStage.png
                         Bosssprite.setPosition({width / 2.0f, 230.0f});
+                        passiveHeal = true ;
+                        if (hp<=400.f)
+                            bossHealth.setSize({hp+5.f*dt, 20.f});
                     }
                     else if (hp <= 300.0f) // below 60-30 stage 2 ;
                     {
@@ -2238,7 +2255,7 @@ int main()
                         Projectile &p = activeProjectiles[i];
                         if (p.parried && Bosssprite.getGlobalBounds().contains(p.position))
                         {
-                            healthBarUpdate(bossHealth, 50.f); // 10 deflects needed to beat Phase 3
+                            healthBarUpdate(bossHealth, 15.f);
                             shootSound.setVolume(soundVolume);
                             shootSound.play();
                             activeProjectiles.erase(activeProjectiles.begin() + i);
@@ -2248,9 +2265,9 @@ int main()
                             float dx = Playersprite.getPosition().x - p.position.x;
                             float dy = Playersprite.getPosition().y - p.position.y;
                             bool hitPlayer = sqrt(dx * dx + dy * dy) < p.hitBox;
-                            bool missedDeflect = p.position.y > boxBottom;
 
-                            if (hitPlayer || missedDeflect)
+
+                            if (hitPlayer)
                             {
                                 shootSound.setVolume(soundVolume);
                                 shootSound.play();
@@ -2298,7 +2315,7 @@ int main()
                     }
 
                     if (currentphase == 1)
-                        invulnerabilitytimer = 1.0f; // frames where you can't get hit again
+                        invulnerabilitytimer = 0.5f - 0.3 *(difficultyIndex-1); // frames where you can't get hit again
                     if (currentphase == 2)
                         invulnerabilitytimer = 2.0f; // for the 2nd phase
 
@@ -2332,7 +2349,7 @@ int main()
                     {
                         if (Bosssprite.getGlobalBounds().contains(playershooting[i].position)) // if the projectile bonks the boss
                         {
-                            healthBarUpdate(bossHealth, 10.f); // hahehaheha DAMAGE YAAAS
+                            healthBarUpdate(bossHealth, 5.f); // hahehaheha DAMAGE YAAAS
                             shootSound.setVolume(soundVolume); // play the oof
                             shootSound.play();
                             playershooting.erase(playershooting.begin() + i);
@@ -2462,8 +2479,7 @@ int main()
             // draw each of the player's shots
             for (const auto &shot : playershooting)
             {
-                Sprite s = Playersprite;
-                s.setScale({Playersprite.getScale().x * 1.0f, Playersprite.getScale().y * 1.0f});
+                Sprite s = playerShot;
                 s.setPosition(shot.position);
                 window.draw(s);
             }
