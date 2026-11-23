@@ -1208,7 +1208,10 @@ int main()
 	{
 		return -1;
 	}
+	// scaling the background (Haras)
 	Sprite bgPhase1Sprite(bgPhase1Tex);
+	Vector2u bgPhase1Size = bgPhase1Tex.getSize();
+	bgPhase1Sprite.setScale({ static_cast<float>(width) / bgPhase1Size.x, static_cast<float>(height) / bgPhase1Size.y });
 	// Speech bubble setup
 	RectangleShape speechBubble({ 180.0f, 65.0f });
 	speechBubble.setFillColor(Color::White);
