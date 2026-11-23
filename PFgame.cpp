@@ -1826,7 +1826,7 @@ int main()
 				bool hitwallphase2 = false;
 
 
-				handlePlayerMovement(Playersprite, currentphase == 2 ? speed * 0.8f : speed, battleBox, dt, currentphase == 1);
+				handlePlayerMovement(Playersprite, currentphase == 2 ? speed * 0.8f : speed, battleBox, dt, currentphase == 1 || currentphase == 3); // ensured you CANT go out of battle box bounds in phase 3 (Haras)
 
 				if (currentphase == 2) {  //to ensure you cant go outside map bounds (Haras)
 					Vector2f newpos = Playersprite.getPosition();
