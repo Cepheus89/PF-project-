@@ -1795,7 +1795,7 @@ int main()
                 if (hit && invulnerabilitytimer <= 0.0f)
                 {
                     if (currentphase == 1)
-                        invulnerabilitytimer = 0.1f; // frames where you can't get hit again
+                        invulnerabilitytimer = 1.0f; // frames where you can't get hit again
                     if (currentphase == 2)
                         invulnerabilitytimer = 2.0f;   // for the 2nd phase
                     shootSound.setVolume(soundVolume); // Sets volume of current selected menu volume (Haras)
