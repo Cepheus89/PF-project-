@@ -1757,7 +1757,7 @@ int main()
     }
     Sprite meteorProj (meteor) ;
     Vector2u meteorSize = meteor.getSize() ;
-    meteorProj.setOrigin({meteorSize.x/2.f , meteorSize.y*0.72}) ; // also taking note of the falme trail
+    meteorProj.setOrigin({meteorSize.x/2.f , meteorSize.y*0.72f}) ; // also taking note of the falme trail
     meteorProj.setScale({1.f, 1.f}) ;
 
 
@@ -2186,11 +2186,6 @@ int main()
                     //only reset on when chagin to menu or restart etc
                     if (currentState != GameState::Death)
                     {
-                        endLesstime = 0.0f;
-                        currentScore = 0;
-                    }
-                    if (changeState == 0)
-                    {
                         endless = false;
                         endLesstime = 0.0f;
                         currentScore = 0;
@@ -2420,8 +2415,8 @@ int main()
                 // first phase stuff ugh(Bazil comments here)
                 if (currentphase == 1)
                 {
-                    //reset it
-                    if (endLesstime == 0.0f) {
+                    //reset it (Endless mode only)
+                    if (changeState == 10 && endLesstime == 0.0f) {
                         waveTriggerClock.restart();
                         magicTimer.restart();
                         burstTimer.restart();
@@ -2684,7 +2679,7 @@ int main()
                     if (projHit)
                     {
                         // Keep full projectile damage unchanged
-                        damage = 15.f - 3.f * (difficultyIndex - 1);
+                        damage = 15.f + 5.f * (difficultyIndex - 1);
                     }
                     else if (mapHit)
                     {
@@ -2712,7 +2707,7 @@ int main()
 
                     shootSound.setVolume(soundVolume); // Sets volume of current selected menu volume (Haras)
                     shootSound.play();                 // Makes sound effect play when player gets hit (Haras)
-                    healthBarUpdate(healthBar, 30 - 5 * (difficultyIndex - 1));
+                    healthBarUpdate(healthBar, 30 + 10 * (difficultyIndex - 1));
                     shakeTimer = 0.3f; // This will actually engage the SI for 0.3 seconds (Haras)
                 }
 
