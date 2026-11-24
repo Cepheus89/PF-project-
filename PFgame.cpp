@@ -1318,12 +1318,14 @@ int main()
         return -1;
     }
     Texture bossStage2;
-    if(!bossStage2.loadFromFile("Assets/bossStage2.png")){
+    if (!bossStage2.loadFromFile("Assets/bossStage2.png"))
+    {
         return -1;
     }
 
     Texture bossFinalStage;
-    if(!bossFinalStage.loadFromFile("Assets/bossFinalStage.png")){
+    if (!bossFinalStage.loadFromFile("Assets/bossFinalStage.png"))
+    {
         return -1;
     }
 
@@ -1459,16 +1461,19 @@ int main()
     {
         return -1;
     }
-    Texture playerProj ;
-    if (!playerProj.loadFromFile(("Assets/flame attack.png")))
-        return -1 ;
-    Sprite playerShot(playerProj) ;
+
+    // the player's own shot texture/sprite (merged from the 1st code)
+    Texture playerProj;
+    if (!playerProj.loadFromFile("Assets/flame attack.png"))
+    {
+        return -1;
+    }
+    Sprite playerShot(playerProj);
     Vector2u shootSize = playerProj.getSize();
-    playerShot.setScale({0.5f,0.5f}) ;
-    playerShot.setOrigin({shootSize.x/2.f , shootSize.y/2.f }) ;
+    playerShot.setScale({0.5f, 0.5f});
+    playerShot.setOrigin({shootSize.x / 2.f, shootSize.y / 2.f});
 
-
-    //magic attack sprite setup
+    // magic attack sprite setup
     Sprite MagicAttack(magic);
     MagicAttack.setTexture(magic);
     MagicAttack.setScale({5.f, 5.f});
@@ -1543,8 +1548,7 @@ int main()
     int currentphase = 1;              // the phase we're at, duh
     float invulnerabilitytimer = 0.0f; // invincibility frames cuz im generous :)
 
-    bool passiveHeal = false ; //heal for boss when health reaches low
-
+    bool passiveHeal = false; // boss passively heals once it drops low in phase 1 (reset on every restart)
 
     // Projectile sprite template
     Sprite projSprite(texture2);
@@ -1663,6 +1667,7 @@ int main()
         isParrying = false; // phase 3 (Haras)
         cooldown = 0.0f;    // phase 3 (Haras)
         parryTimer = 0.0f;  // phase 3 (Haras)
+        passiveHeal = false; // boss heal flag must not carry over into a new run
 
         // restore phase one boss sprite (Haras)
         Bosssprite.setTexture(texture3, true); // resets bounding box back to phase 1 size (Haras)
@@ -1697,7 +1702,7 @@ int main()
         FloatRect p3Bounds = Bosssprite.getLocalBounds();
         Bosssprite.setOrigin({p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f});
         float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y); // fixed clipping (Haras)
-        Bosssprite.setScale({p3Scale, p3Scale});                      // fixed clipping (Haras)
+        Bosssprite.setScale({p3Scale, p3Scale});                       // fixed clipping (Haras)
         Bosssprite.setPosition({width / 2.0f, 240.0f});
     };
 
@@ -1727,11 +1732,27 @@ int main()
     // Boss dialogue setup yay tis SO long omg holy help me im dead
     vector<DialogueLine> dialogueLines;
     size_t dialogueIndex = 0;
-    int dialogueContext = 0; // 1 = intro, 2 = after phase 1, 3 = phase 3 intro
+    int dialogueContext = 0; // 1 = intro, 2 = after phase 1, 3 = after maps, 4 = after the fake death
     bool introDone = false;
 
     SoundBuffer dialogueBuffer;
     Sound dialogueSound(dialogueBuffer);
+
+    // Stuff for te fake death and for the "killing" projectile
+    Projectile cutsceneProj;
+    bool cutsceneProjActive = false;
+    int popupHovered = -1;
+
+    RectangleShape popupBox({460.f, 180.f});
+    popupBox.setOrigin({230.f, 90.f});
+    popupBox.setPosition({width / 2.f, height / 2.f});
+    popupBox.setFillColor(Color(15, 15, 22, 245));
+    popupBox.setOutlineColor(Color::Red);
+    popupBox.setOutlineThickness(3.f);
+
+    Text popupPrompt = createCenteredText(font, "Do you..... wish to end it here?", 20, {width / 2.f, height / 2.f - 35.f}, Color::White);
+    Text popupYes = createCenteredText(font, "YES", 24, {width / 2.f - 85.f, height / 2.f + 35.f}, Color(180, 180, 180));
+    Text popupNo = createCenteredText(font, "NO", 24, {width / 2.f + 85.f, height / 2.f + 35.f}, Color(180, 180, 180));
 
     auto showLine = [&]()
     {
@@ -1794,13 +1815,30 @@ int main()
                 {"Take a look.", Color::Red, ""},
             };
         }
-        else
+        else if (context == 3)
         {
-            // Phase 3 intro: replace these placeholders with your real lines
+            // after the maps finish(Boss might be salty tbh)
             dialogueLines = {
-                {"placeholder line 1", Color::Black, ""},
-                {"placeholder line 2", Color::Black, ""},
-                {"placeholder line 3", Color::Black, ""}};
+                {"Heheahehahehae", Color::Black, "Assets/laugh.wav"},
+                {"It's so funny to be honest", Color::Black, "Assets/voice1.wav"},
+                {"Seeing you miserably struggle for survival", Color::Red, "Assets/voice1.wav"},
+                {"Now now", Color::Black, "Assets/voice1.wav"},
+                {"I think", Color::Black, "Assets/voice1.wav"},
+                {"It's time", Color::Black, "Assets/voice1.wav"},
+                {"You stopped bothering me", Color::Black, ""},
+                {"To hell with you\nannoying prick", Color::Black, ""},
+            };
+        }
+        else if (context == 4)
+        {
+            // OH THE BOSS IS SALTY, OH THEY'RE SO SALTY
+            dialogueLines = {
+                {"What.", Color::Black, "Assets/voice1.wav"},
+                {"WHAT?", Color::Red, "Assets/voice1.wav"},
+                {"HOW ARE YOU\nSTILL ALIVE?", Color::Red, "Assets/voice1.wav"},
+                {"JUST DIE ALREADY", Color::Red, "Assets/voice1.wav"},
+
+            };
         }
 
         playMusicTrack(""); // silence during dialogue
@@ -1831,6 +1869,25 @@ int main()
             playMusicTrack("Assets/phase2_bgm.wav");
         }
         else if (dialogueContext == 3)
+        {
+            cutsceneProj.position = Bosssprite.getPosition();
+            cutsceneProj.isLaunched = true;
+            cutsceneProj.tracksPlayer = false;
+            cutsceneProj.leavesTrail = false;
+            cutsceneProj.hitBox = 14.f;
+
+            Vector2f dir = Playersprite.getPosition() - cutsceneProj.position;
+            float len = sqrt(dir.x * dir.x + dir.y * dir.y);
+            if (len != 0.f)
+                dir /= len;
+            cutsceneProj.velocity = dir * 18.f;
+
+            cutsceneProjActive = true;
+            dialogueContext = 0;
+            changeState = 5; // Go to scripted projectile launch
+            return;          // Exit early so changeState doesn't get set to 2 below
+        }
+        else if (dialogueContext == 4)
         {
             playMusicTrack("Assets/phase3_bgm.wav");
         }
@@ -1888,6 +1945,7 @@ int main()
                     healthBar.setSize({300.f, 20.f});
                     healthBar.setFillColor(Color(57, 255, 20));
                     bossHealth.setSize({500.f, 20.f});
+                    passiveHeal = false; // boss starts fresh (not healing / not in final form) on a new run
                     magicTimer.restart();
                     burstTimer.restart();
                     playershooting.clear();
@@ -2070,7 +2128,13 @@ int main()
                             }
                             else
                             {
-                                enterPhase3();
+
+                                activeProjectiles.clear();
+                                magicPillar.clear();
+                                crystalBurst.clear();
+                                playershooting.clear();
+                                Playersprite.setPosition(battleBox.getPosition());
+                                Bosssprite.setPosition({width / 2.0f, 240.0f});
                                 startDialogue(3);
                             }
                         }
@@ -2174,16 +2238,20 @@ int main()
                     // Change Phase 1 boss sprite based on remaining HP (max bar width = 500.f)
                     float hp = bossHealth.getSize().x;
 
-                    if (hp <= 150.0f&&hp|| passiveHeal == true ) // final third health
+                    // once the boss drops to the final third it enters its final form and keeps it (passiveHeal),
+                    // fixed: removed the stray "&& hp" from the old condition
+                    if (hp <= 150.0f || passiveHeal)
                     {
                         Bosssprite.setTexture(bossFinalStage, true);
                         FloatRect b = Bosssprite.getLocalBounds();
                         Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
                         Bosssprite.setScale({0.14f, 0.14f}); // Adjust scale for bossFinalStage.png
                         Bosssprite.setPosition({width / 2.0f, 230.0f});
-                        passiveHeal = true ;
-                        if (hp<=400.f)
-                            bossHealth.setSize({hp+5.f*dt, 20.f});
+                        passiveHeal = true;
+
+                        // passive heal: slowly regenerates up to 400, never while the boss is at/below 0 so it can't undo a killing blow
+                        if (hp > 0.0f && hp <= 400.f)
+                            bossHealth.setSize({min(400.f, hp + 5.f * dt), 20.f});
                     }
                     else if (hp <= 300.0f) // below 60-30 stage 2 ;
                     {
@@ -2246,16 +2314,16 @@ int main()
                     invulnerabilitytimerMagicAttack -= dt;
                 }
 
-                // Check deflected boss hits, direct player hits, and missed deflects (Haras)
+                // Check deflected boss hits and direct player hits (Haras)
+                // (merged from the 1st code: missed deflects no longer hurt the player)
                 if (currentphase == 3)
                 {
-                    float boxBottom = battleBox.getPosition().y + battleBox.getSize().y / 2.0f + 10.0f;
                     for (int i = 0; i < (int)activeProjectiles.size();)
                     {
                         Projectile &p = activeProjectiles[i];
                         if (p.parried && Bosssprite.getGlobalBounds().contains(p.position))
                         {
-                            healthBarUpdate(bossHealth, 15.f);
+                            healthBarUpdate(bossHealth, 15.f); // deflect damage (merged from the 1st code)
                             shootSound.setVolume(soundVolume);
                             shootSound.play();
                             activeProjectiles.erase(activeProjectiles.begin() + i);
@@ -2265,7 +2333,6 @@ int main()
                             float dx = Playersprite.getPosition().x - p.position.x;
                             float dy = Playersprite.getPosition().y - p.position.y;
                             bool hitPlayer = sqrt(dx * dx + dy * dy) < p.hitBox;
-
 
                             if (hitPlayer)
                             {
@@ -2315,7 +2382,7 @@ int main()
                     }
 
                     if (currentphase == 1)
-                        invulnerabilitytimer = 0.5f - 0.3 *(difficultyIndex-1); // frames where you can't get hit again
+                        invulnerabilitytimer = 0.5f - 0.3f * (difficultyIndex - 1); // frames where you can't get hit again (scales with difficulty, merged from the 1st code)
                     if (currentphase == 2)
                         invulnerabilitytimer = 2.0f; // for the 2nd phase
 
@@ -2349,7 +2416,7 @@ int main()
                     {
                         if (Bosssprite.getGlobalBounds().contains(playershooting[i].position)) // if the projectile bonks the boss
                         {
-                            healthBarUpdate(bossHealth, 5.f); // hahehaheha DAMAGE YAAAS
+                            healthBarUpdate(bossHealth, 5.f);  // hahehaheha DAMAGE YAAAS (5 per shot, merged from the 1st code)
                             shootSound.setVolume(soundVolume); // play the oof
                             shootSound.play();
                             playershooting.erase(playershooting.begin() + i);
@@ -2406,38 +2473,132 @@ int main()
                     }
                 }
             }
+            if (changeState == 5) // Boss throws the killing projectile thingy
+            {
+                while (const optional<Event> event = window.pollEvent())
+                {
+                    if (event->is<Event::Closed>())
+                        window.close();
+                }
+
+                if (cutsceneProjActive)
+                {
+                    cutsceneProj.position += cutsceneProj.velocity * dt * 30.0f; // GO PROJECTILE GOOO
+                    Vector2f diff = Playersprite.getPosition() - cutsceneProj.position;
+                    if (sqrt(diff.x * diff.x + diff.y * diff.y) <= cutsceneProj.hitBox)
+                    {
+                        cutsceneProjActive = false;
+                        shootSound.setVolume(soundVolume);
+                        shootSound.play();
+                        healthBar.setSize({0.f, 20.f});
+                        shakeTimer = 0.4f;
+                        changeState = 6; // cue the trick
+                    }
+                }
+            }
+
+            if (changeState == 6) // the fake death popup
+            {
+                Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+                popupHovered = -1;
+
+                if (popupYes.getGlobalBounds().contains(mousePos))
+                {
+                    popupHovered = 0;
+                    popupYes.setFillColor(Color::Yellow);
+                    popupYes.setScale({1.15f, 1.15f});
+                }
+                else
+                {
+                    popupYes.setFillColor(Color(180, 180, 180));
+                    popupYes.setScale({1.0f, 1.0f});
+                }
+
+                if (popupNo.getGlobalBounds().contains(mousePos))
+                {
+                    popupHovered = 1;
+                    popupNo.setFillColor(Color::Yellow);
+                    popupNo.setScale({1.15f, 1.15f});
+                }
+                else
+                {
+                    popupNo.setFillColor(Color(180, 180, 180));
+                    popupNo.setScale({1.0f, 1.0f});
+                }
+
+                while (const optional<Event> event = window.pollEvent())
+                {
+                    if (event->is<Event::Closed>())
+                        window.close();
+
+                    if (const auto *mouseClick = event->getIf<Event::MouseButtonPressed>())
+                    {
+                        if (mouseClick->button == Mouse::Button::Left)
+                        {
+                            if (popupHovered == 0) // awww you gave up? so sad
+                            {
+                                previousState = GameState::Menu;
+                                currentState = GameState::Menu;
+                                changeState = 0;
+                            }
+                            else if (popupHovered == 1) // so, thee decided to persevere. Exciting......
+                            {
+                                healthBar.setSize({300.f, 20.f});
+                                healthBar.setFillColor(Color(57, 255, 20));
+                                enterPhase3();
+                                startDialogue(4); // cue the yapfest (endDialogue() will start BGM & set changeState = 2)
+                            }
+                        }
+                    }
+                }
+            }
             window.setView(view); // This line actually applies teh offset to before drawing happens below (Haras)
             // Draw static UI and Box first cuz
 
             window.clear();
-            // Work required
-            // this background is draw first so everything else renders on top of it (Haras)
-            if (currentphase == 1 || currentphase == 3)
+
+            bool isPostMapCutscene = (changeState == 4 && dialogueContext == 3) || (changeState == 5) || (changeState == 6);
+
+            if (!isPostMapCutscene)
             {
-                window.draw(bgPhase1Sprite);
-            }
-            if (currentphase == 2)
-            {
-                window.draw(mapsprite); // map only shows up in phase 2, it did not make for cool background in phase 1 tbh
+                if (currentphase == 1 || currentphase == 3)
+                {
+                    window.draw(bgPhase1Sprite);
+                }
+                if (currentphase == 2)
+                {
+                    window.draw(mapsprite);
+                }
+
+                window.draw(boundaryRect);
+                window.draw(healthBar);
             }
 
-            window.draw(boundaryRect);
-            window.draw(healthBar);
-            if (currentphase == 1 || currentphase == 3)
+            if (currentphase == 1 || currentphase == 3 || isPostMapCutscene)
             {
-                window.draw(battleBox);
+                if (!isPostMapCutscene)
+                {
+                    window.draw(battleBox);
+                }
                 window.draw(Bosssprite);
-                window.draw(healthBoundary);
-                window.draw(bossHealth);
-                window.draw(bossName);
+                if (!isPostMapCutscene)
+                {
+                    window.draw(healthBoundary);
+                    window.draw(bossHealth);
+                    window.draw(bossName);
+                }
             }
-            // for phase 3 (Haras)
+
             if (currentphase == 3)
             {
                 window.draw(cooldownRing);
                 window.draw(cover);
             }
-            window.draw(playerIcon);
+
+            if (!isPostMapCutscene)
+            {
+                window.draw(playerIcon);
+            }
 
             // draw the projectiles with the hazard trail
             for (const auto &pillar : magicPillar)
@@ -2476,7 +2637,7 @@ int main()
                     window.draw(projSprite);
                 }
             }
-            // draw each of the player's shots
+            // draw each of the player's shots (now uses the flame attack sprite, merged from the 1st code)
             for (const auto &shot : playershooting)
             {
                 Sprite s = playerShot;
@@ -2530,6 +2691,7 @@ int main()
                 healthBar.setSize({300.f, 20.f});
                 healthBar.setFillColor(Color(57, 255, 20));
                 bossHealth.setSize({500.f, 20.f});
+                passiveHeal = false; // boss must not start the retry in its healing final form
                 magicTimer.restart();
                 burstTimer.restart();
                 playershooting.clear(); // REMOOOF THE SHOOTS MWAEHAEHAHEHAHEAHEH
@@ -2558,6 +2720,24 @@ int main()
             {
                 const DialogueLine &line = dialogueLines[dialogueIndex];
                 drawDialogue(window, font, line.text, line.color, Bosssprite.getPosition() + Vector2f(Bosssprite.getGlobalBounds().size.x / 2.0f + 12.f, -45.f));
+            }
+
+            if (changeState == 5 && cutsceneProjActive)
+            {
+                projSprite.setColor(Color::Red);
+                projSprite.setPosition(cutsceneProj.position);
+                window.draw(projSprite);
+                projSprite.setColor(Color::White);
+            }
+
+            if (changeState == 6)
+            {
+                DimScreen.setFillColor(Color(0, 0, 0, 180));
+                window.draw(DimScreen);
+                window.draw(popupBox);
+                window.draw(popupPrompt);
+                window.draw(popupYes);
+                window.draw(popupNo);
             }
 
             window.display();
