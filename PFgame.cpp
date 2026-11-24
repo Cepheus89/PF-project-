@@ -72,6 +72,7 @@ struct Projectile
     float rotation = 0.0f;     // This is required for the falling crystals ;
     bool parried = false;      // projectiles can be parried
     float steeringtime = 0.0f; // this is for homing projectiles (Haras)
+    bool canParry = true;
 };
 
 struct DialogueLine // hehheahehhaehaeh
@@ -1172,32 +1173,61 @@ bool bossCollision(const vector<Projectile> &activeProjectiles, Vector2f bossPos
     return false;
 }
 
-// phase 3 boss throw attack (Haras)
-void bossThrow(vector<Projectile> &activeProjectiles, Vector2f bossPos)
+// phase 3 boss throw attack: spawns across the top of the screen with volleys, curves, and red dodge shots
+void bossThrow(vector<Projectile> &activeProjectiles, unsigned int width, int &throwPattern)
 {
-    Projectile proj;
-    proj.position = bossPos;
-    proj.isLaunched = false;
-    proj.launchTimer = 0.4f; // short charge telegraph before throwing
-    proj.tracksPlayer = true;
-    proj.leavesTrail = false;
-    proj.hitBox = 12.f;
-    activeProjectiles.push_back(proj);
+    // 6 alternating spawn spots along the top of the screen
+    Vector2f topSpawns[6] = {
+        {width * 0.14f, 45.f},  // top-left
+        {width * 0.86f, 45.f},  // top-right
+        {width * 0.28f, 35.f},  // upper-left
+        {width * 0.72f, 35.f},  // upper-right
+        {width * 0.10f, 130.f}, // mid-top left
+        {width * 0.90f, 130.f}  // mid-top right
+    };
+
+    int count = (throwPattern % 3 == 2) ? 3 : ((throwPattern % 2 == 1) ? 2 : 1);
+
+    for (int i = 0; i < count; i++)
+    {
+        int spot = (throwPattern + i * 3) % 6; // alternates left <-> right
+        Projectile proj;
+        proj.position = topSpawns[spot];
+        proj.isLaunched = false;
+        proj.spawnDelay = i * 0.28f;
+        proj.launchTimer = 0.45f; // brief telegraph at top of screen before firing
+        proj.tracksPlayer = true;
+        proj.leavesTrail = false;
+        proj.hitBox = 26.f; // matches the larger 3.2f MagicAttack sprite
+
+        // Every 2nd volley curves mid-flight
+        if (throwPattern % 2 == 1)
+            proj.steeringtime = 0.75f;
+
+        // On 3-shot volleys, make the middle shot a red dodge-only shot
+        proj.canParry = !(count == 3 && i == 1);
+
+        activeProjectiles.push_back(proj);
+    }
+
+    throwPattern++;
 }
 
-void parryProj(vector<Projectile> &Projectile, Vector2f playerPos, Vector2f bossPos)
+bool parryProj(vector<Projectile> &Projectile, Vector2f playerPos, Vector2f bossPos)
 {
+    bool deflectedAny = false;
     for (auto &proj : Projectile)
     {
-        if (proj.isLaunched && !proj.parried)
+        if (proj.isLaunched && !proj.parried && proj.canParry && proj.spawnDelay <= 0.0f)
         {
             float dx = playerPos.x - proj.position.x;
             float dy = playerPos.y - proj.position.y;
             float dist = sqrt(dx * dx + dy * dy);
-            if (dist <= 45.f && dy >= -15.f)
+            if (dist <= 48.f) // works from any angle (top-left, top-right, or center)
             {
                 proj.tracksPlayer = false;
                 proj.steeringtime = 0.0f;
+                proj.leavesTrail = true; // leaves a fiery trail flying back at the boss
 
                 Vector2f bossDisplacement = {bossPos.x - proj.position.x, bossPos.y - proj.position.y};
                 float length = sqrt(bossDisplacement.x * bossDisplacement.x + bossDisplacement.y * bossDisplacement.y);
@@ -1205,18 +1235,20 @@ void parryProj(vector<Projectile> &Projectile, Vector2f playerPos, Vector2f boss
                 {
                     bossDisplacement /= length;
                 }
-                proj.velocity = bossDisplacement * 25.0f;
+                proj.velocity = bossDisplacement * 32.0f;
                 proj.parried = true;
+                deflectedAny = true;
             }
         }
     }
+    return deflectedAny;
 }
 
 // new function to check for parrying
 void updateParrying(Sprite &blazeRod, const Sprite &playerSprite, Vector2f bossPos, const Sprite &icon1,
                     CircleShape &cooldownRing, RectangleShape &cover,
-                    vector<Projectile> &activeProjectiles, vector<Projectile> &crystalBurst,
-                    bool &isParrying, float &parryTimer, float &cooldown, float dt)
+                    vector<Projectile> &activeProjectiles,
+                    bool &isParrying, float &parryTimer, float &cooldown, float &shakeTimer, float dt)
 {
     blazeRod.setPosition({playerSprite.getPosition().x + 5.f, playerSprite.getPosition().y + 6.0f});
 
@@ -1225,12 +1257,15 @@ void updateParrying(Sprite &blazeRod, const Sprite &playerSprite, Vector2f bossP
         parryTimer += dt;
 
         float progress = parryTimer / 0.15f;
-        parryProj(activeProjectiles, playerSprite.getPosition(), bossPos);
+        if (parryProj(activeProjectiles, playerSprite.getPosition(), bossPos))
+        {
+            shakeTimer = max(shakeTimer, 0.12f); // shake on the parry, GIVING THAT COOL FACTOR RAHHH
+        }
         if (progress >= 1.0f)
         {
             isParrying = false;
             blazeRod.setRotation(degrees(0));
-            cooldown = 0.9f;
+            cooldown = 0.45f; // faster cooldown for multi-shot volleys so you can actually parry tbh I mean im not evil so Im doing this
         }
         else
         {
@@ -1242,7 +1277,7 @@ void updateParrying(Sprite &blazeRod, const Sprite &playerSprite, Vector2f bossP
     {
         cooldown -= dt;
         blazeRod.setColor(Color(120, 120, 120, 100));
-        float ratio = max(0.0f, cooldown / 0.9f);
+        float ratio = max(0.0f, cooldown / 0.45f);
         cover.setPosition({icon1.getPosition().x, icon1.getPosition().y + (40.f - ratio * 40.f)});
         cover.setFillColor(Color::Black);
         cooldownRing.setOutlineColor(Color(255, static_cast<uint8_t>(255.f * (1.0f - ratio)), 0));
@@ -1416,7 +1451,7 @@ int main()
 
     // bossHealth
     RectangleShape bossHealth({500.0f, 20.0f});
-    bossHealth.setOrigin({250.0f, 10.0f});
+    bossHealth.setOrigin({250.f, 10.f});
     bossHealth.setPosition({400.0f, 100.0f});
     bossHealth.setFillColor(Color(155, 40, 230));
 
@@ -1540,6 +1575,7 @@ int main()
     Clock shootyclock; // for the projectiles (Bazil)
     Clock burstTimer;
     Clock phase3Clock; // phase three throw timer (Haras)
+    int phase3ThrowCount = 0;
 
     float burstDelay = 10.0f;
     float waveInterval = 0.8f;
@@ -1664,9 +1700,9 @@ int main()
         phase3Clock.restart(); // phase 3 (Haras)
         bossHealth.setSize({500.0f, 20.0f});
         invulnerabilitytimerMagicAttack = 0.0f;
-        isParrying = false; // phase 3 (Haras)
-        cooldown = 0.0f;    // phase 3 (Haras)
-        parryTimer = 0.0f;  // phase 3 (Haras)
+        isParrying = false;  // phase 3 (Haras)
+        cooldown = 0.0f;     // phase 3 (Haras)
+        parryTimer = 0.0f;   // phase 3 (Haras)
         passiveHeal = false; // boss heal flag must not carry over into a new run
 
         // restore phase one boss sprite (Haras)
@@ -1697,6 +1733,8 @@ int main()
         blazeRod.setRotation(degrees(0.0f));
         phase3Clock.restart();
         speech.setString("SPACE to deflect!");
+        phase3ThrowCount = 0;
+        Bosssprite.setColor(Color::White);
 
         Bosssprite.setTexture(bossphase3tex, true); // reset bounding box for the new boss sprite (Haras)
         FloatRect p3Bounds = Bosssprite.getLocalBounds();
@@ -1768,6 +1806,15 @@ int main()
             else
             {
                 cout << "FAILED TO LOAD: " << dialogueLines[dialogueIndex].sound << endl;
+            }
+            if (dialogueContext == 2 && dialogueIndex == 10)
+            {
+                Bosssprite.setTexture(bossphase3tex, true);
+                FloatRect p3Bounds = Bosssprite.getLocalBounds();
+                Bosssprite.setOrigin({p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f});
+                float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y);
+                Bosssprite.setScale({p3Scale, p3Scale});
+                Bosssprite.setPosition({width / 2.0f, 240.0f});
             }
         }
     };
@@ -2285,10 +2332,13 @@ int main()
                 // boss throws projectiles at player to deflect (Haras)
                 if (currentphase == 3)
                 {
-                    float throwInterval = 1.8f - 0.25f * difficultyIndex; // 1.8 seconds for easy, 1.5 seconds Normal, 1.3 seconds for Bullet Hell
+                    float throwInterval = 1.9f - 0.25f * difficultyIndex;
+                    if (bossHealth.getSize().x <= 150.0f)
+                        throwInterval *= 0.75f;
+
                     if (phase3Clock.getElapsedTime().asSeconds() >= throwInterval)
                     {
-                        bossThrow(activeProjectiles, Bosssprite.getPosition());
+                        bossThrow(activeProjectiles, width, phase3ThrowCount);
                         phase3Clock.restart();
                     }
                 }
@@ -2303,8 +2353,8 @@ int main()
                 if (currentphase == 3)
                 {
                     updateParrying(blazeRod, Playersprite, Bosssprite.getPosition(), playerIcon,
-                                   cooldownRing, cover, activeProjectiles, crystalBurst,
-                                   isParrying, parryTimer, cooldown, dt);
+                                   cooldownRing, cover, activeProjectiles,
+                                   isParrying, parryTimer, cooldown, shakeTimer, dt);
                 }
 
                 // counts down the i-frames
@@ -2323,12 +2373,13 @@ int main()
                         Projectile &p = activeProjectiles[i];
                         if (p.parried && Bosssprite.getGlobalBounds().contains(p.position))
                         {
-                            healthBarUpdate(bossHealth, 15.f); // deflect damage (merged from the 1st code)
+                            healthBarUpdate(bossHealth, 20.f);
                             shootSound.setVolume(soundVolume);
                             shootSound.play();
+                            shakeTimer = max(shakeTimer, 0.18f);
                             activeProjectiles.erase(activeProjectiles.begin() + i);
                         }
-                        else if (!p.parried && p.isLaunched)
+                        else if (!p.parried && p.isLaunched && p.spawnDelay <= 0.0f)
                         {
                             float dx = Playersprite.getPosition().x - p.position.x;
                             float dy = Playersprite.getPosition().y - p.position.y;
@@ -2624,17 +2675,34 @@ int main()
                     hazardDot.setPosition(hazard.position);
                     window.draw(hazardDot);
                 }
+
+                Sprite &activeProjSprite = (currentphase == 3) ? MagicAttack : projSprite;
+                if (currentphase == 3)
+                    MagicAttack.setScale({3.2f, 3.2f}); // Large Phase 3 projectile
+
                 if (proj.parried)
                 {
-                    projSprite.setColor(Color(255, 255, 0, 200));
+                    activeProjSprite.setColor(Color(255, 255, 0, 220)); // Yellow when parried
+                }
+                else if (!proj.canParry)
+                {
+                    activeProjSprite.setColor(Color(255, 50, 50)); // Red = dodge only
                 }
                 else
-                    projSprite.setColor(Color::White);
+                {
+                    activeProjSprite.setColor(Color::White);
+                }
 
                 if (proj.spawnDelay <= 0.0f && (proj.isLaunched || proj.launchTimer > 0.0f))
                 {
-                    projSprite.setPosition(proj.position);
-                    window.draw(projSprite);
+                    activeProjSprite.setPosition(proj.position);
+                    window.draw(activeProjSprite);
+                }
+
+                if (currentphase == 3)
+                {
+                    MagicAttack.setScale({5.f, 5.f});   // Restore pillar scale
+                    MagicAttack.setColor(Color::White); // Restore default color
                 }
             }
             // draw each of the player's shots (now uses the flame attack sprite, merged from the 1st code)
