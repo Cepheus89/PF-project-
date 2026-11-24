@@ -1821,7 +1821,7 @@ int main()
             dialogueLines = {
                 {"Heheahehahehae", Color::Black, "Assets/laugh.wav"},
                 {"It's so funny to be honest", Color::Black, "Assets/voice1.wav"},
-                {"Seeing you miserably struggle for survival", Color::Red, "Assets/voice1.wav"},
+                {"Seeing you miserably\nstruggle for survival", Color::Red, "Assets/voice1.wav"},
                 {"Now now", Color::Black, "Assets/voice1.wav"},
                 {"I think", Color::Black, "Assets/voice1.wav"},
                 {"It's time", Color::Black, "Assets/voice1.wav"},
