@@ -19,6 +19,7 @@ enum class GameState
     Settings,
     Paused, // (Haras)
     Death,
+    Victory, //(Haras)
     Shop,
     Debug // (Haras)
 };
@@ -145,8 +146,8 @@ void healthBarUpdate(RectangleShape &healthBar, float damage)
 // Event polling and hover interaction logic
 // Chnage state = 0 is menu change state 1 is pause change state 2 is playing
 void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
-                      int &hoveredIndex, vector<Text> &mainMenuItems, vector<Text> &deathMenuOptions,
-                      vector<Text> &startMenuItems, vector<Text> &pauseMenuItems, vector<string> &startOptions,
+                      int &hoveredIndex, vector<Text> &mainMenuItems, vector<Text> &deathMenuOptions, 
+                      vector<Text> &victoryMenuOptions, vector<Text> &startMenuItems, vector<Text> &pauseMenuItems, vector<string> &startOptions,
                       int &difficultyIndex, const vector<string> &difficulties, const Font &font, int &changeState, GameState &previousState,
                       float &speed, float &projectileSpeed, float &waveInterval, float &launchInterval,
                       float &soundVolume, float &musicVolume, float &shakeIntensity, int &currentHeart, Texture &hearts, const vector<string> &heartFiles,
@@ -170,6 +171,8 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
         activeMenuItems = &pauseMenuItems;
     else if (currentState == GameState::Death)
         activeMenuItems = &deathMenuOptions;
+    else if (currentState == GameState::Victory)
+        activeMenuItems = &victoryMenuOptions; // (Haras) for brand new (Yeah very new TRUST) victory screen
 
     // checking all events
     while (const optional event = window.pollEvent())
@@ -271,6 +274,22 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
                         changeState = 0; // (Haras) for game end screen overhaul
                     }
                 }
+                // for victory screen YAY (Haras)
+                else if (currentState == GameState::Victory)
+                { // (Haras) for victory screen
+                    if (hoveredIndex == 0)
+                    {
+                        previousState = GameState::Playing;
+                        currentState = GameState::Playing;
+                        changeState = 2;
+                    }
+                    else if (hoveredIndex == 1)
+                    {
+                        previousState = GameState::Menu;
+                        currentState = GameState::Menu;
+                        changeState = 0;
+                    }
+                }
             }
         }
 
@@ -327,11 +346,11 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
                 {
                     window.close();
                 }
-                else if (currentState == GameState::Death)
+                else if (currentState == GameState::Death || currentState == GameState::Victory)
                 {
                     previousState = GameState::Menu;
                     currentState = GameState::Menu;
-                    changeState = 0; // (Haras) for game end screen overhaul
+                    changeState = 0; // (Haras) for game end screen overhaul AND victory screen
                 }
             }
 
@@ -468,10 +487,14 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
             }
             else
             {
-                // (Haras) for game end screen overhaul
+                // (Haras) for game end AND victory screen overhaul
                 if (currentState == GameState::Death)
                 {
                     item.setFillColor(indexCounter == 0 ? Color(255, 40, 40) : Color::White);
+                }
+                else if (currentState == GameState::Victory)
+                {
+                    item.setFillColor(indexCounter == 0 ? Color(255, 215, 0) : Color::White);
                 }
                 else
                 {
@@ -549,7 +572,7 @@ void keys(RenderWindow &window, const Font &font, const string &newKey, Vector2f
 // remove the stuff from here like the death rectangle bring it in main so it can be used in other functions
 void rendering(RenderWindow &window, const VertexArray &starfield, GameState currentState,
                const Text &titleText, const vector<Text> &mainMenuItems, vector<Text> &deathMenuItems,
-               const vector<Text> &startMenuItems, const vector<Text> &pauseMenuItems, const Font &font, const string &currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
+               vector<Text>& victoryMenuItems, const vector<Text> &startMenuItems, const vector<Text> &pauseMenuItems, const Font &font, const string &currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
                RectangleShape &dimBackground, const Sprite &playerSprite, int currentHeart, const DebugState &debug)
 {
     // rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras),
@@ -561,9 +584,9 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
         dimBackground.setFillColor(Color(0, 0, 0, 150));
         window.draw(dimBackground);
     }
-    else if (currentState == GameState::Death)
+    else if (currentState == GameState::Death || currentState == GameState::Victory)
     {
-        window.clear(Color::Black); // game end screen overhaul
+        window.clear(Color::Black); // game end AND victory screen overhaul (Haras)
     }
     else
     {
@@ -702,84 +725,84 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
     }
     else if (currentState == GameState::Death)
     { // game end screen overhaul (Haras)
-        // central spotlight implemented here (Haras)
-        float beamtop = 140.f, beamheight = 305.f;
-        RectangleShape beamouter({190.f, beamheight});
-        beamouter.setOrigin({95.f, 0.f});
-        beamouter.setPosition({400.f, beamtop});
-        beamouter.setFillColor(Color(30, 8, 14));
-        window.draw(beamouter);
+        // central spotlight reaching top of screen with vertical + horizontal gradient (Haras)
+        float beamTop = 0.f;
+        float beamBottom = 445.f;
 
-        RectangleShape beammid({136.f, beamheight});
-        beammid.setOrigin({68.f, 0.f});
-        beammid.setPosition({400.f, beamtop});
-        beammid.setFillColor(Color(44, 12, 20));
-        window.draw(beammid);
+        Color edgeTop(18, 6, 24, 0);
+        Color edgeBot(38, 10, 18, 85);
+        Color coreTop(34, 12, 42, 135);
+        Color coreBot(76, 22, 36, 220);
 
-        RectangleShape beaminner({82.f, beamheight});
-        beaminner.setOrigin({41.f, 0.f});
-        beaminner.setPosition({400.f, beamtop});
-        beaminner.setFillColor(Color(58, 16, 26));
-        window.draw(beaminner);
+        VertexArray spotlight(PrimitiveType::TriangleStrip);
+        spotlight.append(Vertex{ { 400.f - 95.f, beamTop }, edgeTop });
+        spotlight.append(Vertex{ { 400.f - 95.f, beamBottom }, edgeBot });
+        spotlight.append(Vertex{ { 400.f - 41.f, beamTop }, coreTop });
+        spotlight.append(Vertex{ { 400.f - 41.f, beamBottom }, coreBot });
+        spotlight.append(Vertex{ { 400.f + 41.f, beamTop }, coreTop });
+        spotlight.append(Vertex{ { 400.f + 41.f, beamBottom }, coreBot });
+        spotlight.append(Vertex{ { 400.f + 95.f, beamTop }, edgeTop });
+        spotlight.append(Vertex{ { 400.f + 95.f, beamBottom }, edgeBot });
+        window.draw(spotlight);
 
         // floor of spotlight and drop shadow (Haras)
         CircleShape padouter(95.f, 60);
-        padouter.setOrigin({95.f, 95.f});
-        padouter.setPosition({400.f, 445.f});
-        padouter.setScale({1.0f, 0.38f});
+        padouter.setOrigin({ 95.f, 95.f });
+        padouter.setPosition({ 400.f, 445.f });
+        padouter.setScale({ 1.0f, 0.38f });
         padouter.setFillColor(Color(90, 30, 44));
         window.draw(padouter);
 
         CircleShape padinner(70.f, 60);
-        padinner.setOrigin({70.f, 70.f});
-        padinner.setPosition({400.f, 445.f});
-        padinner.setScale({1.0f, 0.38f});
+        padinner.setOrigin({ 70.f, 70.f });
+        padinner.setPosition({ 400.f, 445.f });
+        padinner.setScale({ 1.0f, 0.38f });
         padinner.setFillColor(Color(110, 38, 54));
         window.draw(padinner);
 
         CircleShape heartShadow(20.f, 30);
-        heartShadow.setOrigin({20.f, 20.f});
-        heartShadow.setPosition({400.f, 453.f});
-        heartShadow.setScale({1.0f, 0.35f});
+        heartShadow.setOrigin({ 20.f, 20.f });
+        heartShadow.setPosition({ 400.f, 453.f });
+        heartShadow.setScale({ 1.0f, 0.35f });
         heartShadow.setFillColor(Color(40, 10, 18));
         window.draw(heartShadow);
 
         // player sprite on the spotlight stage (Haras)
         Sprite centerheart = playerSprite;
-        centerheart.setScale({1.f, 1.f});
-        centerheart.setPosition({400.f, 435.f});
+        centerheart.setScale({ 1.f, 1.f });
+        centerheart.setPosition({ 400.f, 435.f });
         window.draw(centerheart);
 
         // game over and try again display (Haras)
-        Text gameword = createCenteredText(font, "GAME", 78, {400.f, 105.f}, Color::White);
+        Text gameword = createCenteredText(font, "GAME", 78, { 400.f, 105.f }, Color::White);
         gameword.setStyle(Text::Bold);
-        gameword.setScale({1.2f, 1.0f});
+        gameword.setScale({ 1.2f, 1.0f });
         window.draw(gameword);
-        Text overword = createCenteredText(font, "OVER", 78, {400.f, 195.f}, Color(255, 40, 40));
+        Text overword = createCenteredText(font, "OVER", 78, { 400.f, 195.f }, Color(255, 40, 40));
         overword.setStyle(Text::Bold);
-        overword.setScale({1.2f, 1.0f});
+        overword.setScale({ 1.2f, 1.0f });
         window.draw(overword);
         // encourage trying again (Haras)
-        Text tryagain = createCenteredText(font, "Try Again?...", 22, {400.f, 305.f}, Color::White);
+        Text tryagain = createCenteredText(font, "Try Again?...", 22, { 400.f, 305.f }, Color::White);
         window.draw(tryagain);
         // making the buttons aesthetically pretty (Haras)
-        float buttoncentersX[2] = {185.f, 615.f};
-        float lineyoffsets[2] = {440.f, 490.f};
+        float buttoncentersX[2] = { 185.f, 615.f };
+        float lineyoffsets[2] = { 440.f, 490.f };
         for (float cx : buttoncentersX)
         {
             for (float ly : lineyoffsets)
             {
-                RectangleShape dotL({3.f, 2.f});
-                dotL.setPosition({cx - 88.f, ly});
+                RectangleShape dotL({ 3.f, 2.f });
+                dotL.setPosition({ cx - 88.f, ly });
 
-                RectangleShape dashL({10.f, 2.f});
-                dashL.setPosition({cx - 78.f, ly});
-                RectangleShape midBar({116.f, 2.f});
-                midBar.setPosition({cx - 58.f, ly});
-                RectangleShape dashR({10.f, 2.f});
-                dashR.setPosition({cx + 68.f, ly});
-                RectangleShape dotR({3.f, 2.f});
-                dotR.setPosition({cx + 85.f, ly});
+                RectangleShape dashL({ 10.f, 2.f });
+                dashL.setPosition({ cx - 78.f, ly });
+                RectangleShape midBar({ 116.f, 2.f });
+                midBar.setPosition({ cx - 58.f, ly });
+                RectangleShape dashR({ 10.f, 2.f });
+                dashR.setPosition({ cx + 68.f, ly });
+                RectangleShape dotR({ 3.f, 2.f });
+                dotR.setPosition({ cx + 85.f, ly });
 
                 window.draw(dotL);
                 window.draw(dashL);
@@ -789,11 +812,105 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
             }
         }
 
-        for (const auto &item : deathMenuItems)
+        for (const auto& item : deathMenuItems)
         {
             window.draw(item);
         }
-    }
+        }
+    else if (currentState == GameState::Victory)
+    { // victory screen based on game over layout with gold spotlight gradient (Haras)
+        float beamTop = 0.f;
+        float beamBottom = 445.f;
+
+        Color edgeTop(28, 22, 6, 0);     // fades into black at top outer edges
+        Color edgeBot(72, 54, 14, 85);   // soft golden edge meeting padouter
+        Color coreTop(60, 46, 14, 135);  // warm amber tint at top
+        Color coreBot(150, 115, 28, 220); // bright golden core near floor pad
+
+        VertexArray spotlight(PrimitiveType::TriangleStrip);
+        spotlight.append(Vertex{ { 400.f - 95.f, beamTop }, edgeTop });
+        spotlight.append(Vertex{ { 400.f - 95.f, beamBottom }, edgeBot });
+        spotlight.append(Vertex{ { 400.f - 41.f, beamTop }, coreTop });
+        spotlight.append(Vertex{ { 400.f - 41.f, beamBottom }, coreBot });
+        spotlight.append(Vertex{ { 400.f + 41.f, beamTop }, coreTop });
+        spotlight.append(Vertex{ { 400.f + 41.f, beamBottom }, coreBot });
+        spotlight.append(Vertex{ { 400.f + 95.f, beamTop }, edgeTop });
+        spotlight.append(Vertex{ { 400.f + 95.f, beamBottom }, edgeBot });
+        window.draw(spotlight);
+
+        // floor of spotlight and drop shadow (Haras)
+        CircleShape padouter(95.f, 60);
+        padouter.setOrigin({ 95.f, 95.f });
+        padouter.setPosition({ 400.f, 445.f });
+        padouter.setScale({ 1.0f, 0.38f });
+        padouter.setFillColor(Color(135, 102, 26));
+        window.draw(padouter);
+
+        CircleShape padinner(70.f, 60);
+        padinner.setOrigin({ 70.f, 70.f });
+        padinner.setPosition({ 400.f, 445.f });
+        padinner.setScale({ 1.0f, 0.38f });
+        padinner.setFillColor(Color(175, 136, 36));
+        window.draw(padinner);
+
+        CircleShape heartShadow(20.f, 30);
+        heartShadow.setOrigin({ 20.f, 20.f });
+        heartShadow.setPosition({ 400.f, 453.f });
+        heartShadow.setScale({ 1.0f, 0.35f });
+        heartShadow.setFillColor(Color(55, 40, 10));
+        window.draw(heartShadow);
+
+        // player sprite on the spotlight stage (Haras)
+        Sprite centerheart = playerSprite;
+        centerheart.setScale({ 1.f, 1.f });
+        centerheart.setPosition({ 400.f, 435.f });
+        window.draw(centerheart);
+
+        // victory title and sub  title display (Haras)
+        Text topword = createCenteredText(font, "YOU", 78, { 400.f, 105.f }, Color::White);
+        topword.setStyle(Text::Bold);
+        topword.setScale({ 1.2f, 1.0f });
+        window.draw(topword);
+        Text botword = createCenteredText(font, "WON", 78, { 400.f, 195.f }, Color(255, 215, 0));
+        botword.setStyle(Text::Bold);
+        botword.setScale({ 1.2f, 1.0f });
+        window.draw(botword);
+
+        Text subtitle = createCenteredText(font, "The Requiem Ends...", 22, { 400.f, 305.f }, Color::White);
+        window.draw(subtitle);
+
+        // decorative border around the buttons (Haras)
+        float buttoncentersX[2] = { 185.f, 615.f };
+        float lineyoffsets[2] = { 440.f, 490.f };
+        for (float cx : buttoncentersX)
+        {
+            for (float ly : lineyoffsets)
+            {
+                RectangleShape dotL({ 3.f, 2.f });
+                dotL.setPosition({ cx - 88.f, ly });
+
+                RectangleShape dashL({ 10.f, 2.f });
+                dashL.setPosition({ cx - 78.f, ly });
+                RectangleShape midBar({ 116.f, 2.f });
+                midBar.setPosition({ cx - 58.f, ly });
+                RectangleShape dashR({ 10.f, 2.f });
+                dashR.setPosition({ cx + 68.f, ly });
+                RectangleShape dotR({ 3.f, 2.f });
+                dotR.setPosition({ cx + 85.f, ly });
+
+                window.draw(dotL);
+                window.draw(dashL);
+                window.draw(midBar);
+                window.draw(dashR);
+                window.draw(dotR);
+            }
+        }
+
+        for (const auto& item : victoryMenuItems)
+        {
+            window.draw(item);
+        }
+        }
 }
 
 // Player movement function with box containment (Bazil comments in this function)
@@ -1425,7 +1542,14 @@ int main()
     vector<Text> deathMenuItems = {
         createCenteredText(font, "PERSEVERE", 22, {185.f, 465.f}, Color(255, 40, 40)),
         createCenteredText(font, "GIVE UP", 22, {615.f, 465.f}, Color::White)};
+
+    // for victory screen (Haras)
+    vector<Text> victoryMenuItems = {
+        createCenteredText(font, "PLAY AGAIN", 22,{ 185.f, 465.f }, Color(255, 215, 0)),
+        createCenteredText(font, "MAIN MENU", 22,{ 615.f, 465.f }, Color::White) };
     GameState previousState = GameState::Menu;
+
+    // Battle Box Setup
 
     // Battle Box Setup
     RectangleShape battleBox({380.0f, 120.0f});
@@ -1962,9 +2086,9 @@ int main()
             starfieldBackground(myStars, starBackground, dt);
             // integrated soundvolume and musicvolume variable
             menu_Interaction(window, view, currentState, hoveredIndex,
-                             mainMenuItems, deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
-                             difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval,
-                             soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon, debug);
+                mainMenuItems, deathMenuItems, victoryMenuItems, startMenuItems, pauseMenuItems, startOptions,
+                difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval, launchInterval,
+                soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon, debug);
 
             if (currentState != GameState::Death)
                 introDone = false; // intro replays on new game so it doesn't replay on a retry cuz holy yap
@@ -2021,8 +2145,8 @@ int main()
             }
             // integrated soundvolume and musicVolume variable
             rendering(window, starBackground, currentState, titletext, mainMenuItems, deathMenuItems,
-                      startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume,
-                      musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug);
+                victoryMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume,
+                musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug);
             window.display();
         }
         else
@@ -2406,7 +2530,8 @@ int main()
 
                     if (bossHealth.getSize().x <= 0)
                     {
-                        resetToPhase1(); // loops back after beating Phase 3 ( will replace with a VICTORY screen later)
+                        changeState = 3;
+                        currentState = GameState::Victory; // VICTORYYYYY (Haras)
                     }
                 }
 
@@ -2734,15 +2859,15 @@ int main()
             if (changeState == 1)
             {
                 menu_Interaction(window, view, currentState, hoveredIndex,
-                                 mainMenuItems, deathMenuItems, startMenuItems, pauseMenuItems, startOptions,
-                                 difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval,
-                                 launchInterval, soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon, debug);
+                    mainMenuItems, deathMenuItems, victoryMenuItems, startMenuItems, pauseMenuItems, startOptions,
+                    difficultyIndex, difficulties, font, changeState, previousState, speed, projectileSpeed, waveInterval,
+                    launchInterval, soundVolume, musicVolume, shakeIntesity, currentHeart, hearts, heartFiles, scaling, Playersprite, playerIcon, debug);
 
                 bgMusic.setVolume(musicVolume); // this allows live update from within settings menu
 
                 rendering(window, starBackground, currentState, titletext,
-                          mainMenuItems, deathMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-                          DimScreen, Playersprite, currentHeart, debug);
+                    mainMenuItems, deathMenuItems, victoryMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
+                    DimScreen, Playersprite, currentHeart, debug);
             }
             if (changeState == 3)
             {
