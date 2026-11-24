@@ -86,9 +86,9 @@ struct DialogueLine // hehheahehhaehaeh
 };
 
 // for all the dialogues
-void drawDialogue(RenderWindow &window, const Font &font, const string &str, Color color, Vector2f boxPos) // function for the dialogues
+void drawDialogue(RenderWindow& window, const Font& font, const string& str, Color color, Vector2f boxPos) // function for the dialogues
 {
-    RectangleShape box({300.f, 100.f}); // rectangle text box size cuz yeah
+    RectangleShape box({ 300.f, 100.f }); // rectangle text box size cuz yeah
     box.setPosition(boxPos);            // I mean, yeah
     box.setFillColor(Color::White);     // the background colour
     box.setOutlineColor(Color::Black);  // the outline
@@ -103,30 +103,30 @@ void drawDialogue(RenderWindow &window, const Font &font, const string &str, Col
 
 // Helper function to create centered text cleanly
 // this creates centered text so we do not have to qrite it again and again
-Text createCenteredText(const Font &font, const string &str, unsigned int size, Vector2f pos, Color color)
+Text createCenteredText(const Font& font, const string& str, unsigned int size, Vector2f pos, Color color)
 {
     Text text(font, str, size);
     text.setFillColor(color);
     FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+    text.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
     text.setPosition(pos);
     return text;
 }
 
 // Reusable function to setup any list of menu items centered on screen (800px width center = 400.f)
 // this handles the spacing
-vector<Text> createMenuItems(const Font &font, const vector<string> &options, float startY = 280.f, float spacing = 65.f, unsigned int fontSize = 30, float startX = 400.f)
+vector<Text> createMenuItems(const Font& font, const vector<string>& options, float startY = 280.f, float spacing = 65.f, unsigned int fontSize = 30, float startX = 400.f)
 {
     vector<Text> items;
     // Takes a list of items and places them vertically so they look aligned
     int rowIndex = 0;
 
-    for (const auto &textString : options)
+    for (const auto& textString : options)
     {
         Text menuItem(font, textString, fontSize);
         FloatRect bounds = menuItem.getLocalBounds();
-        menuItem.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-        menuItem.setPosition({startX, startY + rowIndex * spacing});
+        menuItem.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
+        menuItem.setPosition({ startX, startY + rowIndex * spacing });
         menuItem.setFillColor(Color(180, 180, 180));
         items.push_back(menuItem);
 
@@ -136,24 +136,24 @@ vector<Text> createMenuItems(const Font &font, const vector<string> &options, fl
 }
 
 // reduces health bar each time when hit
-void healthBarUpdate(RectangleShape &healthBar, float damage)
+void healthBarUpdate(RectangleShape& healthBar, float damage)
 {
     // also now we pass damage instead of fixed value ;
     Vector2f currentPosition = healthBar.getSize();
     float hitpoints = currentPosition.x;
     hitpoints -= damage;
-    healthBar.setSize({hitpoints, 20.0f});
+    healthBar.setSize({ hitpoints, 20.0f });
 }
 
 // Event polling and hover interaction logic
 // Chnage state = 0 is menu change state 1 is pause change state 2 is playing
-void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
-                      int &hoveredIndex, vector<Text> &mainMenuItems, vector<Text> &deathMenuOptions,
-                      vector<Text> &victoryMenuOptions, vector<Text> &startMenuItems, vector<Text> &pauseMenuItems, vector<string> &startOptions,
-                      int &difficultyIndex, const vector<string> &difficulties, const Font &font, int &changeState, GameState &previousState,
-                      float &speed, float &projectileSpeed, float &waveInterval, float &launchInterval,
-                      float &soundVolume, float &musicVolume, float &shakeIntensity, int &currentHeart, Texture &hearts, const vector<string> &heartFiles,
-                      float scaling[], Sprite &playerSprite, Sprite &playerIcon, DebugState &debug)
+void menu_Interaction(RenderWindow& window, View& view, GameState& currentState,
+    int& hoveredIndex, vector<Text>& mainMenuItems, vector<Text>& deathMenuOptions,
+    vector<Text>& victoryMenuOptions, vector<Text>& startMenuItems, vector<Text>& pauseMenuItems, vector<string>& startOptions,
+    int& difficultyIndex, const vector<string>& difficulties, const Font& font, int& changeState, GameState& previousState,
+    float& speed, float& projectileSpeed, float& waveInterval, float& launchInterval,
+    float& soundVolume, float& musicVolume, float& shakeIntensity, int& currentHeart, Texture& hearts, const vector<string>& heartFiles,
+    float scaling[], Sprite& playerSprite, Sprite& playerIcon, DebugState& debug)
 { // (Haras)
     // Making menu functional for soundvolume and musicvolume and shakeintensity changes, also added DEBUG state (Haras)
     // gets new mouse pixel also works on all types / sizes of the screen
@@ -162,7 +162,7 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
     Vector2f mousePos = window.mapPixelToCoords(mousePixel);
 
     // Get active menu items list depending on current state
-    vector<Text> *activeMenuItems = nullptr;
+    vector<Text>* activeMenuItems = nullptr;
 
     // load the required menu
     if (currentState == GameState::Menu)
@@ -189,7 +189,7 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
             window.setView(view);
         }
 
-        if (const auto *mouseClick = event->getIf<Event::MouseButtonPressed>())
+        if (const auto* mouseClick = event->getIf<Event::MouseButtonPressed>())
         {
             if (mouseClick->button == Mouse::Button::Left)
             {
@@ -227,10 +227,10 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
                         waveInterval = 0.8f - 0.2f * (difficultyIndex - 1);
                     }
                     // work in prpgress
-                    else if (hoveredIndex == 1){
+                    else if (hoveredIndex == 1) {
                         previousState = GameState::Playing;
                         currentState = GameState::Playing; // Tutorial page add textures
-                        changeState=10 ;
+                        changeState = 10;
 
                     }
                     else if (hoveredIndex == 2)
@@ -299,7 +299,7 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
         }
 
         // Typing password in Debug menu (Haras)
-        if (const auto *textEntered = event->getIf<Event::TextEntered>())
+        if (const auto* textEntered = event->getIf<Event::TextEntered>())
         {
             if (currentState == GameState::Debug && !debug.unlocked)
             {
@@ -318,7 +318,7 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
         }
 
         // ESC key press , return to previous stage
-        if (const auto *keyPressed = event->getIf<Event::KeyPressed>())
+        if (const auto* keyPressed = event->getIf<Event::KeyPressed>())
         {
             if (keyPressed->code == Keyboard::Key::Escape)
             {
@@ -464,13 +464,13 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
                     // change sprite texture ;
                     playerSprite.setTexture(hearts, true);
                     FloatRect bounds = playerSprite.getLocalBounds();
-                    playerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-                    playerSprite.setScale({scaling[currentHeart], scaling[currentHeart]});
+                    playerSprite.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
+                    playerSprite.setScale({ scaling[currentHeart], scaling[currentHeart] });
 
                     playerIcon.setTexture(hearts, true);
-                    playerIcon.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+                    playerIcon.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
 
-                    playerIcon.setScale({scaling[currentHeart], scaling[currentHeart]});
+                    playerIcon.setScale({ scaling[currentHeart], scaling[currentHeart] });
                 }
             }
         }
@@ -481,14 +481,14 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
     {
         hoveredIndex = -1;
         int indexCounter = 0;
-        for (auto &item : *activeMenuItems)
+        for (auto& item : *activeMenuItems)
         {
             if (item.getGlobalBounds().contains(mousePos))
             {
                 hoveredIndex = indexCounter;
                 item.setFillColor(Color::Yellow);
                 // resize
-                item.setScale({1.15f, 1.15f});
+                item.setScale({ 1.15f, 1.15f });
             }
             else
             {
@@ -506,7 +506,7 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
                     item.setFillColor(Color(180, 180, 180));
                 }
 
-                item.setScale({1.0f, 1.0f});
+                item.setScale({ 1.0f, 1.0f });
             }
             indexCounter++;
         }
@@ -514,7 +514,7 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
 }
 
 // Starfield initialization across 800x600 bounds
-void starfieldCreation(vector<Star> &myStars)
+void starfieldCreation(vector<Star>& myStars)
 {
     myStars.clear();
     // creates random star locations within the s[eed gives them a random velocity
@@ -526,19 +526,19 @@ void starfieldCreation(vector<Star> &myStars)
         float y = static_cast<float>(rand() % 600);
         float speed = (1.0f + static_cast<float>(rand() % 30) / 10.0f);
         uint8_t brightness = static_cast<uint8_t>(100 + rand() % 155);
-        myStars.push_back({{x, y}, speed, Color(brightness, brightness, brightness)});
+        myStars.push_back({ { x, y }, speed, Color(brightness, brightness, brightness) });
     }
 }
 
 // Background star movement reset bound at 600px height
 // implemented delta-time for movement so it is independent of fps (Haras)
-void starfieldBackground(vector<Star> &myStar, VertexArray &starfield, float dt)
+void starfieldBackground(vector<Star>& myStar, VertexArray& starfield, float dt)
 {
     starfield.clear();
     // clear the previious vertex array so a new can be loaded
     // change the position with updating new height and looping star back to front when it reaches end of the screen
     // checks vector array for the position and also updates it their
-    for (auto &s : myStar)
+    for (auto& s : myStar)
     {
         // implemented delta-time for movement so it is independent of fps (Haras)
         s.position.y += s.speed * dt * 30.0f;
@@ -547,26 +547,26 @@ void starfieldBackground(vector<Star> &myStar, VertexArray &starfield, float dt)
             s.position.y = 0.f;
             s.position.x = static_cast<float>(rand() % 800);
         }
-        starfield.append(Vertex{s.position, s.color});
+        starfield.append(Vertex{ s.position, s.color });
     }
 }
 
-void keys(RenderWindow &window, const Font &font, const string &newKey, Vector2f pos, Vector2f keySize, bool isPressed)
+void keys(RenderWindow& window, const Font& font, const string& newKey, Vector2f pos, Vector2f keySize, bool isPressed)
 {
     float offSet = isPressed ? 3.f : 0.f; // Using this instead of messsy if
 
     // actual key being created
     // box surrounding it
-    RectangleShape keyCreated({keySize});
-    keyCreated.setOrigin({keySize.x / 2.f, keySize.y / 2.f});
+    RectangleShape keyCreated({ keySize });
+    keyCreated.setOrigin({ keySize.x / 2.f, keySize.y / 2.f });
 
-    keyCreated.setPosition({pos.x, pos.y + offSet});
+    keyCreated.setPosition({ pos.x, pos.y + offSet });
     keyCreated.setFillColor(isPressed ? Color(60, 60, 20) : Color(20, 20, 25));
-    keyCreated.setOutlineThickness({3.f});
+    keyCreated.setOutlineThickness({ 3.f });
 
     keyCreated.setOutlineColor(isPressed ? Color::Yellow : Color::White); // this allowes to change color when key press of the border
 
-    Text key = createCenteredText(font, newKey, 20, {pos.x, pos.y + offSet - 2.f}, isPressed ? Color::Yellow : Color::White);
+    Text key = createCenteredText(font, newKey, 20, { pos.x, pos.y + offSet - 2.f }, isPressed ? Color::Yellow : Color::White);
 
     window.draw(keyCreated);
     window.draw(key);
@@ -575,11 +575,11 @@ void keys(RenderWindow &window, const Font &font, const string &newKey, Vector2f
 
 // Rendering all the stuff for menu
 // remove the stuff from here like the death rectangle bring it in main so it can be used in other functions
-void rendering(RenderWindow &window, const VertexArray &starfield, GameState currentState,
-               const Text &titleText, const vector<Text> &mainMenuItems, vector<Text> &deathMenuItems,
-               vector<Text>& victoryMenuItems, const vector<Text> &startMenuItems, const vector<Text> &pauseMenuItems, const Font &font, const string &currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
-               RectangleShape &dimBackground, const Sprite &playerSprite, int currentHeart, const DebugState &debug ,
-               bool endless, int currentScore, int highScore)
+void rendering(RenderWindow& window, const VertexArray& starfield, GameState currentState,
+    const Text& titleText, const vector<Text>& mainMenuItems, vector<Text>& deathMenuItems,
+    vector<Text>& victoryMenuItems, const vector<Text>& startMenuItems, const vector<Text>& pauseMenuItems, const Font& font, const string& currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
+    RectangleShape& dimBackground, const Sprite& playerSprite, int currentHeart, const DebugState& debug,
+    bool endless, int currentScore, int highScore)
 {
     // rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras),
     //  it has been edited for game end screen overhaul (Haras)
@@ -604,17 +604,17 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
     {
         window.draw(titleText);
         // print all items in start menu
-        for (const auto &item : mainMenuItems)
+        for (const auto& item : mainMenuItems)
         {
             window.draw(item);
         }
     }
     else if (currentState == GameState::StartMenu)
     {
-        Text subTitle = createCenteredText(font, "PRE-GAME SETUP", 40, {400.f, 130.f}, Color::Yellow);
+        Text subTitle = createCenteredText(font, "PRE-GAME SETUP", 40, { 400.f, 130.f }, Color::Yellow);
         window.draw(subTitle);
         // Prints all items in start menu
-        for (const auto &item : startMenuItems)
+        for (const auto& item : startMenuItems)
         {
             window.draw(item);
         }
@@ -622,24 +622,24 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
     // Prints the tutorial examples , (use better graphics by images/ texture)
     else if (currentState == GameState::Tutorial)
     {
-        Text title = createCenteredText(font, "HOW TO PLAY", 40, {400.f, 120.f}, Color::Yellow);
+        Text title = createCenteredText(font, "HOW TO PLAY", 40, { 400.f, 120.f }, Color::Yellow);
 
         // checking for each case individually spacoing of 55 in between
-        keys(window, font, "W", {225.0f, 200.0f}, {45.f, 45.f}, Keyboard::isKeyPressed(Keyboard::Key::W));
-        keys(window, font, "S", {225.0f, 255.0f}, {45.f, 45.f}, Keyboard::isKeyPressed(Keyboard::Key::S));
-        keys(window, font, "D", {280.0f, 255.0f}, {45.f, 45.f}, Keyboard::isKeyPressed(Keyboard::Key::D));
-        keys(window, font, "A", {170.f, 255.0f}, {45.f, 45.f}, Keyboard::isKeyPressed(Keyboard::Key::A));
+        keys(window, font, "W", { 225.0f, 200.0f }, { 45.f, 45.f }, Keyboard::isKeyPressed(Keyboard::Key::W));
+        keys(window, font, "S", { 225.0f, 255.0f }, { 45.f, 45.f }, Keyboard::isKeyPressed(Keyboard::Key::S));
+        keys(window, font, "D", { 280.0f, 255.0f }, { 45.f, 45.f }, Keyboard::isKeyPressed(Keyboard::Key::D));
+        keys(window, font, "A", { 170.f, 255.0f }, { 45.f, 45.f }, Keyboard::isKeyPressed(Keyboard::Key::A));
 
-        keys(window, font, "Space", {550.f, 255.f}, {160.f, 45.f}, Keyboard::isKeyPressed(Keyboard::Key::Space));
-        Text movementControls = createCenteredText(font, "MOVEMENT", 25, {225.f, 350.f}, Color::White);
+        keys(window, font, "Space", { 550.f, 255.f }, { 160.f, 45.f }, Keyboard::isKeyPressed(Keyboard::Key::Space));
+        Text movementControls = createCenteredText(font, "MOVEMENT", 25, { 225.f, 350.f }, Color::White);
 
-        Text W = createCenteredText(font, "UP", 15, {225.f, 160.f}, Color(255, 255, 255, 200));
-        Text A = createCenteredText(font, "LEFT", 15, {110.f, 255.f}, Color(255, 255, 255, 200));
-        Text S = createCenteredText(font, "DOWN", 15, {225.f, 300.f}, Color(255, 255, 255, 200));
-        Text D = createCenteredText(font, "RIGHT", 15, {340.f, 255.f}, Color(255, 255, 255, 200));
-        Text parry = createCenteredText(font, "PARRY/SHOOT", 25, {550.f, 350.f}, Color::White);
+        Text W = createCenteredText(font, "UP", 15, { 225.f, 160.f }, Color(255, 255, 255, 200));
+        Text A = createCenteredText(font, "LEFT", 15, { 110.f, 255.f }, Color(255, 255, 255, 200));
+        Text S = createCenteredText(font, "DOWN", 15, { 225.f, 300.f }, Color(255, 255, 255, 200));
+        Text D = createCenteredText(font, "RIGHT", 15, { 340.f, 255.f }, Color(255, 255, 255, 200));
+        Text parry = createCenteredText(font, "PARRY/SHOOT", 25, { 550.f, 350.f }, Color::White);
 
-        Text escapeText = createCenteredText(font, "Press ESC To Return", 25.f, {400.f, 500.f}, Color::Cyan);
+        Text escapeText = createCenteredText(font, "Press ESC To Return", 25.f, { 400.f, 500.f }, Color::Cyan);
         window.draw(W);
         window.draw(A);
         window.draw(S);
@@ -653,11 +653,11 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
     else if (currentState == GameState::Shop)
     {
         // shop Title
-        Text ShopTitle = createCenteredText(font, "HEART SKINS ", 30.f, {400.f, 150.f}, Color::Yellow);
+        Text ShopTitle = createCenteredText(font, "HEART SKINS ", 30.f, { 400.f, 150.f }, Color::Yellow);
         window.draw(ShopTitle);
         Sprite previewHeart = playerSprite;
-        previewHeart.setScale({playerSprite.getScale().x * 2.f, playerSprite.getScale().y * 2.f});
-        previewHeart.setPosition({400.f, 270.f});
+        previewHeart.setScale({ playerSprite.getScale().x * 2.f, playerSprite.getScale().y * 2.f });
+        previewHeart.setPosition({ 400.f, 270.f });
         window.draw(previewHeart);
         string skinName;
 
@@ -674,17 +674,17 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
         else
             skinName = "Purple";
 
-        Text skinTitle = createCenteredText(font, "<    " + skinName + "    >", 30.f, {400.f, 300.f}, Color::White);
+        Text skinTitle = createCenteredText(font, "<    " + skinName + "    >", 30.f, { 400.f, 300.f }, Color::White);
 
-        Text controls = createCenteredText(font, "LEFT / RIGHT KEY TO SWITCH BETWEEN KEYS", 30.f, {400.f, 400.f}, Color::Yellow);
+        Text controls = createCenteredText(font, "LEFT / RIGHT KEY TO SWITCH BETWEEN KEYS", 30.f, { 400.f, 400.f }, Color::Yellow);
         window.draw(skinTitle);
         window.draw(controls);
     }
     else if (currentState == GameState::Paused)
     {
-        Text pausetitle = createCenteredText(font, "PAUSED", 40, {400.f, 130.f}, Color::Yellow);
+        Text pausetitle = createCenteredText(font, "PAUSED", 40, { 400.f, 130.f }, Color::Yellow);
         window.draw(pausetitle);
-        for (const auto &item : pauseMenuItems)
+        for (const auto& item : pauseMenuItems)
         {
             window.draw(item);
         }
@@ -693,7 +693,7 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
     {
         // update static 100 % string to dynamically display variable deals with both SF, BGM, SI (Haras)
         string settingsStr = " SETTINGS MENU \n\n[ Sound: " + to_string(static_cast<int>(soundVolume)) + "% ] <- Left/Right \n[ BGM: " + to_string(static_cast<int>(musicVolume)) + "% ] <- Up/Down\n[ Shake: " + to_string(static_cast<int>(shakeIntensity)) + " ] <- W/S\n[ Debug Mode ] <- Press TAB\n\n[Controls:WASD + MOUSE]\n\n(Press ESC for Menu)";
-        Text settingsText = createCenteredText(font, settingsStr, 22, {400.f, 300.f}, Color::White);
+        Text settingsText = createCenteredText(font, settingsStr, 22, { 400.f, 300.f }, Color::White);
         window.draw(settingsText);
     }
     // This is all for debug menu implementation (Haras)
@@ -701,11 +701,11 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
     {
         if (!debug.unlocked)
         {
-            Text title = createCenteredText(font, "DEBUG ACCESS", 38, {400.f, 160.f}, Color::Yellow);
-            Text prompt = createCenteredText(font, "Enter Password (Press ENTER):", 22, {400.f, 240.f}, Color::White);
+            Text title = createCenteredText(font, "DEBUG ACCESS", 38, { 400.f, 160.f }, Color::Yellow);
+            Text prompt = createCenteredText(font, "Enter Password (Press ENTER):", 22, { 400.f, 240.f }, Color::White);
 
             string masked(debug.input.size(), '*');
-            Text passText = createCenteredText(font, "[ " + masked + "_ ]", 28, {400.f, 305.f}, Color::Cyan);
+            Text passText = createCenteredText(font, "[ " + masked + "_ ]", 28, { 400.f, 305.f }, Color::Cyan);
 
             window.draw(title);
             window.draw(prompt);
@@ -713,18 +713,18 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
 
             if (debug.wrongPassword)
             {
-                Text err = createCenteredText(font, "WRONG PASSWORD", 20, {400.f, 365.f}, Color(255, 50, 50));
+                Text err = createCenteredText(font, "WRONG PASSWORD", 20, { 400.f, 365.f }, Color(255, 50, 50));
                 window.draw(err);
             }
 
-            Text back = createCenteredText(font, "(Press ESC to Return)", 20, {400.f, 450.f}, Color(180, 180, 180));
+            Text back = createCenteredText(font, "(Press ESC to Return)", 20, { 400.f, 450.f }, Color(180, 180, 180));
             window.draw(back);
         }
         else
         {
-            Text title = createCenteredText(font, "DEBUG - SELECT PHASE", 34, {400.f, 150.f}, Color::Yellow);
+            Text title = createCenteredText(font, "DEBUG - SELECT PHASE", 34, { 400.f, 150.f }, Color::Yellow);
             string phases = "[ 1 ] Phase 1 - Boss Waves\n\n[ 2 ] Phase 2 - Lava Track\n\n[ 3 ] Phase 3 - Parry Boss\n\n(Press ESC to Return)";
-            Text phaseText = createCenteredText(font, phases, 24, {400.f, 330.f}, Color::White);
+            Text phaseText = createCenteredText(font, phases, 24, { 400.f, 330.f }, Color::White);
             window.draw(title);
             window.draw(phaseText);
         }
@@ -793,7 +793,7 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
         if (endless)
         {
             //different for endless mode show the score now and the high score;
-            Text finalScore =createCenteredText(font, "SCORE: " + to_string(currentScore), 24, { 400.f, 275.f }, Color::White);
+            Text finalScore = createCenteredText(font, "SCORE: " + to_string(currentScore), 24, { 400.f, 275.f }, Color::White);
             Text finalBest = createCenteredText(font, "HIGH SCORE: " + to_string(highScore), 24, { 400.f, 310.f }, Color::Yellow);
             window.draw(finalScore);
             window.draw(finalBest);
@@ -836,7 +836,7 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
         {
             window.draw(item);
         }
-        }
+    }
     else if (currentState == GameState::Victory)
     { // victory screen based on game over layout with gold spotlight gradient (Haras)
         float beamTop = 0.f;
@@ -930,11 +930,11 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
         {
             window.draw(item);
         }
-        }
+    }
 }
 
 // Player movement function with box containment (Bazil comments in this function)
-void handlePlayerMovement(Sprite &playerSprite, float speed, const RectangleShape &battleBox, float dt, bool useBox)
+void handlePlayerMovement(Sprite& playerSprite, float speed, const RectangleShape& battleBox, float dt, bool useBox)
 {
     // we need the sprite, the speed and the rectangle box to trap the player to prevent excess movement
     Vector2f pos = playerSprite.getPosition(); // apparently the SFML library already has x and y stored so it doesn't need you to declare them. Cool ig
@@ -1000,14 +1000,14 @@ void handlePlayerMovement(Sprite &playerSprite, float speed, const RectangleShap
 
 // New fuunction for attack
 // attack spawns at te top and slowly comes down
-void verticle(vector<Projectile> &pillars, float xposition, int difficultyIndex)
+void verticle(vector<Projectile>& pillars, float xposition, int difficultyIndex)
 {
     // created a new varible of type projectile assign it its attrigbutes position updated in update projectile function
     Projectile magic;
     //-ev position so it seems they spawn
-    magic.position = {xposition, -150.f};
+    magic.position = { xposition, -150.f };
     // difficulty changes speed
-    magic.velocity = {0.0f, 12.f + 5 * (difficultyIndex - 1)};
+    magic.velocity = { 0.0f, 12.f + 5 * (difficultyIndex - 1) };
     magic.isLaunched = true;
     magic.tracksPlayer = false;
     magic.leavesTrail = false;
@@ -1015,7 +1015,7 @@ void verticle(vector<Projectile> &pillars, float xposition, int difficultyIndex)
     pillars.push_back(magic);
 }
 
-void burst(vector<Projectile> &machineGun, int difficultyIndex, Vector2f bossPos, float launchInterval)
+void burst(vector<Projectile>& machineGun, int difficultyIndex, Vector2f bossPos, float launchInterval)
 {
     // creating 20 randomly created crystals to remove predictability
     for (int i = 0; i < 13 + 5 * (difficultyIndex - 1); i++)
@@ -1038,7 +1038,7 @@ void burst(vector<Projectile> &machineGun, int difficultyIndex, Vector2f bossPos
         float speed;
         speed = 5.0f + rand() % 5 + 3.f * (difficultyIndex - 1);
         angle = angle * 3.14157f / 180.0;
-        crystal.velocity = {speed * cos(angle), speed * sin(angle)};
+        crystal.velocity = { speed * cos(angle), speed * sin(angle) };
         // new element
         machineGun.push_back(crystal);
     }
@@ -1046,7 +1046,7 @@ void burst(vector<Projectile> &machineGun, int difficultyIndex, Vector2f bossPos
 
 // The first wave stuff, crescent bullets (Bazil comments in this function)
 // bullets need to be launched more frequently
-void crescent(vector<Projectile> &activeProjectiles, float crescentcentre, float spawnposition, float spawnInterval, float launchInterval)
+void crescent(vector<Projectile>& activeProjectiles, float crescentcentre, float spawnposition, float spawnInterval, float launchInterval)
 {
     int totalBullets = 7;
     float totalSpawnTime = (totalBullets - 1) * spawnInterval;
@@ -1056,7 +1056,7 @@ void crescent(vector<Projectile> &activeProjectiles, float crescentcentre, float
         float horizontalshift = -0.5f + (i * step);                           // shift for each bullet
         float horizontalspawn = crescentcentre + (horizontalshift * 180.0f);  // basically the spawn position, change the 180 to a higher number to create a bigger spread and vice versa
         float arcDip = (0.25f - (horizontalshift * horizontalshift)) * 60.0f; // same logic as above one
-        Vector2f spawnPos = {horizontalspawn, spawnposition - arcDip};        // basically the position it spawns at, I hope this doesn't need an explanation
+        Vector2f spawnPos = { horizontalspawn, spawnposition - arcDip };        // basically the position it spawns at, I hope this doesn't need an explanation
         Projectile proj;
         proj.position = spawnPos;
         proj.isLaunched = false;
@@ -1073,7 +1073,7 @@ void crescent(vector<Projectile> &activeProjectiles, float crescentcentre, float
 }
 
 // The second wave stuff, horizontal projectiles (Bazil comments in this function)
-void horizontal(vector<Projectile> &activeProjectiles, const RectangleShape &battleBox, float projectileSpeed, float projectileposition)
+void horizontal(vector<Projectile>& activeProjectiles, const RectangleShape& battleBox, float projectileSpeed, float projectileposition)
 {
     Vector2f boxP = battleBox.getPosition(); // boxPosition too large a name and im lazeh :P
     Vector2f boxSize = battleBox.getSize();  // same thing
@@ -1083,16 +1083,16 @@ void horizontal(vector<Projectile> &activeProjectiles, const RectangleShape &bat
     float right = boxP.x + boxSize.x / 2.0f + 120.0f;
     // ok so I added the +90 and -90 because initially I dind't have them and the projectiles were spawning like RIGHT on the border and it was so weird ew. So I added the +90 and -90
     Projectile pLeft;
-    pLeft.position = {left, height + 20.0f};
-    pLeft.velocity = {projectileSpeed, 0.0f};
+    pLeft.position = { left, height + 20.0f };
+    pLeft.velocity = { projectileSpeed, 0.0f };
     pLeft.isLaunched = false;
     pLeft.tracksPlayer = false;
     pLeft.leavesTrail = true;
     pLeft.launchTimer = 0.8f;
     // added the laucnehd and tracks stuff
     Projectile pRight;
-    pRight.position = {right, height};
-    pRight.velocity = {-projectileSpeed, 0.0f};
+    pRight.position = { right, height };
+    pRight.velocity = { -projectileSpeed, 0.0f };
     pRight.isLaunched = false;
     pRight.tracksPlayer = false;
     pRight.leavesTrail = true;
@@ -1103,7 +1103,7 @@ void horizontal(vector<Projectile> &activeProjectiles, const RectangleShape &bat
 }
 
 // This is the attack where the projectiles spawn in a circle and burst outwards (Bazil comments in this function)
-void pinwheel(vector<Projectile> &activeProjectiles, Vector2f centerPos, float projectileSpeed)
+void pinwheel(vector<Projectile>& activeProjectiles, Vector2f centerPos, float projectileSpeed)
 {
     int numBullets = 8;
     for (int i = 0; i < numBullets; i++)
@@ -1112,7 +1112,7 @@ void pinwheel(vector<Projectile> &activeProjectiles, Vector2f centerPos, float p
         //(next line) of cmath functions
         // the logic for the angle is pretty simple, so basically what im doing is im using radians for the angle of each projectile seperately
         // 2𝝅 is the total angle and I multiply it by i to get the angle of each seperate projectile. So for the first projectile, i is 0 so angle comes out to be 0, 2nd projectile i is 1 so 2𝝅*1/8 = 𝝅/4 or 45 degrees. Rest is simple
-        Vector2f dir = {cos(angle), sin(angle)}; // simple SOHCAHTOA stuff im not explaining this
+        Vector2f dir = { cos(angle), sin(angle) }; // simple SOHCAHTOA stuff im not explaining this
 
         Projectile proj;
         proj.position = centerPos;
@@ -1126,7 +1126,7 @@ void pinwheel(vector<Projectile> &activeProjectiles, Vector2f centerPos, float p
 }
 
 // for the 4th attack, the homing projectiles (Bazil comments in this function, unless specified otherwise)
-void homingdarts(vector<Projectile> &activeProjectiles, const RectangleShape &battleBox, float centerX)
+void homingdarts(vector<Projectile>& activeProjectiles, const RectangleShape& battleBox, float centerX)
 {
     Vector2f boxSize = battleBox.getSize(); // simple enough, obtaining size, copy pasted this mweheheh (FROM THE CODE ABOVE NOT AI OMG)
 
@@ -1134,7 +1134,7 @@ void homingdarts(vector<Projectile> &activeProjectiles, const RectangleShape &ba
     {
         Projectile proj;
         float horizontallocation = -60.0f + i * 40.0f;                                                        // its basically where the projectile spawns in the horizontal position, -60 being the initial one for the first projectile
-        proj.position = {centerX + horizontallocation, battleBox.getPosition().y - boxSize.y / 2.0f - 15.0f}; // initial projectile location
+        proj.position = { centerX + horizontallocation, battleBox.getPosition().y - boxSize.y / 2.0f - 15.0f }; // initial projectile location
         proj.isLaunched = false;
         proj.launchTimer = 0.7f + (i * 0.2f); // launched at intervals with i
         proj.tracksPlayer = true;             // well like, duh
@@ -1145,9 +1145,9 @@ void homingdarts(vector<Projectile> &activeProjectiles, const RectangleShape &ba
 }
 
 // this is to check if the projectiles of the wave have launched because without this, my first crescent had just started firing and the next one would start spawning like holy(Bazil)
-bool allLaunched(const vector<Projectile> &activeProjectiles)
+bool allLaunched(const vector<Projectile>& activeProjectiles)
 {
-    for (const auto &proj : activeProjectiles)
+    for (const auto& proj : activeProjectiles)
     {
         if (proj.isLaunched == false || proj.spawnDelay > 0.0f)
         {
@@ -1158,11 +1158,11 @@ bool allLaunched(const vector<Projectile> &activeProjectiles)
 }
 
 // update projectiles but it makes sense to me brrrrr(Bazil comments in this function)
-void updateProjectiles(vector<Projectile> &activeProjectiles, float t, unsigned int width, unsigned int height, Vector2f playerPos, float projectileSpeed)
+void updateProjectiles(vector<Projectile>& activeProjectiles, float t, unsigned int width, unsigned int height, Vector2f playerPos, float projectileSpeed)
 {
     for (int i = 0; i < (int)activeProjectiles.size();)
     {                                         // omg I tried doing just activeProjectiles.size() initially and it gave me an error, apparently the proper format is encasing the int in brackets and then it worked. The more I know ig
-        Projectile &p = activeProjectiles[i]; // p is the current projectile in the list, we go through them with i
+        Projectile& p = activeProjectiles[i]; // p is the current projectile in the list, we go through them with i
 
         // projectile hasn't appeared yet, just count down its spawn delay and skip everything else for the next frame
         if (p.spawnDelay > 0.0f)
@@ -1181,7 +1181,7 @@ void updateProjectiles(vector<Projectile> &activeProjectiles, float t, unsigned 
             { // has the timer hit 0? let the projectile out the prison :(
                 if (p.tracksPlayer)
                 { // is it gonna home in?
-                    Vector2f direction = {playerPos.x - p.position.x, playerPos.y - p.position.y};
+                    Vector2f direction = { playerPos.x - p.position.x, playerPos.y - p.position.y };
                     float length = sqrt(direction.x * direction.x + direction.y * direction.y);
                     if (length != 0.0f)
                     {
@@ -1199,7 +1199,7 @@ void updateProjectiles(vector<Projectile> &activeProjectiles, float t, unsigned 
             if (p.steeringtime > 0.0f)
             {
                 p.steeringtime -= t;
-                Vector2f desired = {playerPos.x - p.position.x, playerPos.y - p.position.y};
+                Vector2f desired = { playerPos.x - p.position.x, playerPos.y - p.position.y };
                 float desiredlength = sqrt(desired.x * desired.x + desired.y * desired.y);
                 if (desiredlength > 0.0f)
                 {
@@ -1222,7 +1222,7 @@ void updateProjectiles(vector<Projectile> &activeProjectiles, float t, unsigned 
                 if (p.trailTimer >= 0.03f)
                 {
                     p.trailTimer = 0.0f;
-                    p.trail.push_back({p.position, 1.0f});
+                    p.trail.push_back({ p.position, 1.0f });
                 }
             }
         }
@@ -1253,7 +1253,7 @@ void updateProjectiles(vector<Projectile> &activeProjectiles, float t, unsigned 
 }
 
 // Map collisions go brrrrrrrrrrr heahehaheahehaheha
-bool mapcollission(const sf::Image &mapimage, const sf::Sprite &mapsprite, Vector2f playerpos)
+bool mapcollission(const sf::Image& mapimage, const sf::Sprite& mapsprite, Vector2f playerpos)
 {
     Vector2f mapposition = mapsprite.getPosition();                      // map centre
     sf::Vector2u imagesize = mapimage.getSize();                         // map size
@@ -1263,15 +1263,15 @@ bool mapcollission(const sf::Image &mapimage, const sf::Sprite &mapsprite, Vecto
     {
         return true;
     }
-    Color pixelcolour = mapimage.getPixel({static_cast<unsigned int>(pixelx), static_cast<unsigned int>(pixely)});
+    Color pixelcolour = mapimage.getPixel({ static_cast<unsigned int>(pixelx), static_cast<unsigned int>(pixely) });
     bool stonePath = (pixelcolour.r < 200 && pixelcolour.b > 50);
     return !stonePath;
 }
 
 // For the collisions with projectiles logic here we go brrrrrrrrrrrr (Bazil comments in this function)
-bool collision(const vector<Projectile> &activeProjectiles, Vector2f playerPos)
+bool collision(const vector<Projectile>& activeProjectiles, Vector2f playerPos)
 {
-    for (const auto &proj : activeProjectiles)
+    for (const auto& proj : activeProjectiles)
     {
         if (proj.isLaunched && !proj.parried)
         {                                                // well like, yeah. It should only run if its launched , also shouldnot work if parried
@@ -1283,7 +1283,7 @@ bool collision(const vector<Projectile> &activeProjectiles, Vector2f playerPos)
             }
         }
 
-        for (const auto &hazard : proj.trail)
+        for (const auto& hazard : proj.trail)
         { // same thing over here but for the trail
             float distX = playerPos.x - hazard.position.x;
             float distY = playerPos.y - hazard.position.y;
@@ -1297,9 +1297,9 @@ bool collision(const vector<Projectile> &activeProjectiles, Vector2f playerPos)
 }
 
 // New line of code for boss proejctiles only runs if the object has been parried
-bool bossCollision(const vector<Projectile> &activeProjectiles, Vector2f bossPos)
+bool bossCollision(const vector<Projectile>& activeProjectiles, Vector2f bossPos)
 {
-    for (const auto &proj : activeProjectiles)
+    for (const auto& proj : activeProjectiles)
     {
         if (proj.parried == true)
         {
@@ -1315,16 +1315,16 @@ bool bossCollision(const vector<Projectile> &activeProjectiles, Vector2f bossPos
 }
 
 // phase 3 boss throw attack: spawns across the top of the screen with volleys, curves, and red dodge shots
-void bossThrow(vector<Projectile> &activeProjectiles, unsigned int width, int &throwPattern)
+void bossThrow(vector<Projectile>& activeProjectiles, unsigned int width, int& throwPattern)
 {
     // 6 alternating spawn spots along the top of the screen
     Vector2f topSpawns[6] = {
-        {width * 0.14f, 45.f},  // top-left
-        {width * 0.86f, 45.f},  // top-right
-        {width * 0.28f, 35.f},  // upper-left
-        {width * 0.72f, 35.f},  // upper-right
-        {width * 0.10f, 130.f}, // mid-top left
-        {width * 0.90f, 130.f}  // mid-top right
+        { width * 0.14f, 45.f },  // top-left
+        { width * 0.86f, 45.f },  // top-right
+        { width * 0.28f, 35.f },  // upper-left
+        { width * 0.72f, 35.f },  // upper-right
+        { width * 0.10f, 130.f }, // mid-top left
+        { width * 0.90f, 130.f }  // mid-top right
     };
 
     int count = (throwPattern % 3 == 2) ? 3 : ((throwPattern % 2 == 1) ? 2 : 1);
@@ -1354,10 +1354,10 @@ void bossThrow(vector<Projectile> &activeProjectiles, unsigned int width, int &t
     throwPattern++;
 }
 
-bool parryProj(vector<Projectile> &Projectile, Vector2f playerPos, Vector2f bossPos)
+bool parryProj(vector<Projectile>& Projectile, Vector2f playerPos, Vector2f bossPos)
 {
     bool deflectedAny = false;
-    for (auto &proj : Projectile)
+    for (auto& proj : Projectile)
     {
         if (proj.isLaunched && !proj.parried && proj.canParry && proj.spawnDelay <= 0.0f)
         {
@@ -1370,7 +1370,7 @@ bool parryProj(vector<Projectile> &Projectile, Vector2f playerPos, Vector2f boss
                 proj.steeringtime = 0.0f;
                 proj.leavesTrail = true; // leaves a fiery trail flying back at the boss
 
-                Vector2f bossDisplacement = {bossPos.x - proj.position.x, bossPos.y - proj.position.y};
+                Vector2f bossDisplacement = { bossPos.x - proj.position.x, bossPos.y - proj.position.y };
                 float length = sqrt(bossDisplacement.x * bossDisplacement.x + bossDisplacement.y * bossDisplacement.y);
                 if (length != 0.0f)
                 {
@@ -1386,12 +1386,12 @@ bool parryProj(vector<Projectile> &Projectile, Vector2f playerPos, Vector2f boss
 }
 
 // new function to check for parrying
-void updateParrying(Sprite &blazeRod, const Sprite &playerSprite, Vector2f bossPos, const Sprite &icon1,
-                    CircleShape &cooldownRing, RectangleShape &cover,
-                    vector<Projectile> &activeProjectiles,
-                    bool &isParrying, float &parryTimer, float &cooldown, float &shakeTimer, float dt)
+void updateParrying(Sprite& blazeRod, const Sprite& playerSprite, Vector2f bossPos, const Sprite& icon1,
+    CircleShape& cooldownRing, RectangleShape& cover,
+    vector<Projectile>& activeProjectiles,
+    bool& isParrying, float& parryTimer, float& cooldown, float& shakeTimer, float dt)
 {
-    blazeRod.setPosition({playerSprite.getPosition().x + 5.f, playerSprite.getPosition().y + 6.0f});
+    blazeRod.setPosition({ playerSprite.getPosition().x + 5.f, playerSprite.getPosition().y + 6.0f });
 
     if (isParrying)
     {
@@ -1419,7 +1419,7 @@ void updateParrying(Sprite &blazeRod, const Sprite &playerSprite, Vector2f bossP
         cooldown -= dt;
         blazeRod.setColor(Color(120, 120, 120, 100));
         float ratio = max(0.0f, cooldown / 0.45f);
-        cover.setPosition({icon1.getPosition().x, icon1.getPosition().y + (40.f - ratio * 40.f)});
+        cover.setPosition({ icon1.getPosition().x, icon1.getPosition().y + (40.f - ratio * 40.f) });
         cover.setFillColor(Color::Black);
         cooldownRing.setOutlineColor(Color(255, static_cast<uint8_t>(255.f * (1.0f - ratio)), 0));
     }
@@ -1439,10 +1439,10 @@ int main()
     unsigned int width = 800;
     unsigned int height = 600;
 
-    RenderWindow window(VideoMode({width, height}), "Bullet Requiem");
+    RenderWindow window(VideoMode({ width, height }), "Bullet Requiem");
     window.setFramerateLimit(60); // increased fps from 30 to 60 for smoother gameplay (Haras)
 
-    View view(FloatRect({0.0f, 0.0f}, {static_cast<float>(width), static_cast<float>(height)}));
+    View view(FloatRect({ 0.0f, 0.0f }, { static_cast<float>(width), static_cast<float>(height) }));
     window.setView(view);
 
     // Creating vector arrays to store info about the stars falling in back ground
@@ -1458,9 +1458,9 @@ int main()
         "Assets/BlueHeart.png",
         "Assets/GreenHeart.png",
         "Assets/PinkHeart.png",
-        "Assets/PurpleHeart.png"};
+        "Assets/PurpleHeart.png" };
 
-    float scaling[6] = {0.6, 0.6, 0.42, 0.6, 0.6, 0.50};
+    float scaling[6] = { 0.6, 0.6, 0.42, 0.6, 0.6, 0.50 };
 
     // Load Textures & Fonts
     Texture hearts;
@@ -1514,7 +1514,7 @@ int main()
     // scaling the background (Haras)
     Sprite bgPhase1Sprite(bgPhase1Tex);
     Vector2u bgPhase1Size = bgPhase1Tex.getSize();
-    bgPhase1Sprite.setScale({static_cast<float>(width) / bgPhase1Size.x, static_cast<float>(height) / bgPhase1Size.y});
+    bgPhase1Sprite.setScale({ static_cast<float>(width) / bgPhase1Size.x, static_cast<float>(height) / bgPhase1Size.y });
 
     Text speech(font);
     speech.setCharacterSize(12);
@@ -1525,8 +1525,8 @@ int main()
     FloatRect titleBounds = titletext.getLocalBounds();
     titletext.setFillColor(Color(255, 40, 40));
     titletext.setStyle(Text::Bold);
-    titletext.setOrigin({titleBounds.size.x / 2.f, titleBounds.size.y / 2.f});
-    titletext.setPosition({400.0f, 120.0f});
+    titletext.setOrigin({ titleBounds.size.x / 2.f, titleBounds.size.y / 2.f });
+    titletext.setPosition({ 400.0f, 120.0f });
 
     // Further work on Pause screen
     RectangleShape DimScreen(Vector2f(window.getSize()));
@@ -1537,35 +1537,35 @@ int main()
     int hoveredIndex = -1;
 
     // Main Menu Setup
-    vector<string> mainOptions = {"START GAME", "SETTINGS", "EXIT"};
+    vector<string> mainOptions = { "START GAME", "SETTINGS", "EXIT" };
     vector<Text> mainMenuItems = createMenuItems(font, mainOptions, 280.f, 65.f, 30);
     // Did this to move tutorial on main page
     mainOptions.push_back("TUTORIAL");
     // using [0] because of create menu item returns vector text
-    mainMenuItems.push_back(createMenuItems(font, {mainOptions[3]}, 550.f, 65.f, 30.f, 700.f)[0]);
+    mainMenuItems.push_back(createMenuItems(font, { mainOptions[3] }, 550.f, 65.f, 30.f, 700.f)[0]);
 
     mainOptions.push_back("SKINS");
-    mainMenuItems.push_back(createMenuItems(font, {mainOptions[4]}, 550.f, 65.f, 30.f, 70.f)[0]);
+    mainMenuItems.push_back(createMenuItems(font, { mainOptions[4] }, 550.f, 65.f, 30.f, 70.f)[0]);
 
     // Start Sub-Menu Setup (Difficulty & Tutorial)
-    vector<string> difficulties = {"EASY", "NORMAL", "BULLET HELL"};
+    vector<string> difficulties = { "EASY", "NORMAL", "BULLET HELL" };
     int difficultyIndex = 1; // Default to NORMAL
 
     vector<string> startOptions = {
         "DIFFICULTY: " + difficulties[difficultyIndex],
         "ENDLESS",
         "NEW GAME",
-        "BACK"};
+        "BACK" };
 
     vector<Text> startMenuItems = createMenuItems(font, startOptions, 240.f, 60.f, 26);
 
-    vector<string> pauseOptions = {"RESUME", "SETTINGS", "MAIN MENU", "EXIT GAME"};
+    vector<string> pauseOptions = { "RESUME", "SETTINGS", "MAIN MENU", "EXIT GAME" };
     vector<Text> pauseMenuItems = createMenuItems(font, pauseOptions, 240.f, 60.f, 26);
 
     // for game end menu overhaul (Haras)
     vector<Text> deathMenuItems = {
-        createCenteredText(font, "PERSEVERE", 22, {185.f, 465.f}, Color(255, 40, 40)),
-        createCenteredText(font, "GIVE UP", 22, {615.f, 465.f}, Color::White)};
+        createCenteredText(font, "PERSEVERE", 22,{ 185.f, 465.f }, Color(255, 40, 40)),
+        createCenteredText(font, "GIVE UP", 22,{ 615.f, 465.f }, Color::White) };
 
     // for victory screen (Haras)
     vector<Text> victoryMenuItems = {
@@ -1576,37 +1576,37 @@ int main()
     // Battle Box Setup
 
     // Battle Box Setup
-    RectangleShape battleBox({380.0f, 120.0f});
+    RectangleShape battleBox({ 380.0f, 120.0f });
     battleBox.setFillColor(Color::Black);
     battleBox.setOutlineColor(Color::White);
     battleBox.setOutlineThickness(3.0f);
-    battleBox.setOrigin({380.0f / 2.0f, 120.0f / 2.0f});
-    battleBox.setPosition({width / 2.0f, height / 2.0f + 100.0f});
+    battleBox.setOrigin({ 380.0f / 2.0f, 120.0f / 2.0f });
+    battleBox.setPosition({ width / 2.0f, height / 2.0f + 100.0f });
 
     // health bar (location changed, centering done (Haras))
-    RectangleShape healthBar({300.f, 20.f});
-    healthBar.setOrigin({150.f, 10.f});
-    healthBar.setPosition({width / 2.0f, 510.0f});
+    RectangleShape healthBar({ 300.f, 20.f });
+    healthBar.setOrigin({ 150.f, 10.f });
+    healthBar.setPosition({ width / 2.0f, 510.0f });
     healthBar.setFillColor(Color(57, 255, 20));
 
     // health bar boundary and underneath (location changed, centering done (Haras))
-    RectangleShape boundaryRect({300.0f, 20.0f});
-    boundaryRect.setOrigin({150.f, 10.f});
-    boundaryRect.setPosition({width / 2.0f, 510.0f});
+    RectangleShape boundaryRect({ 300.0f, 20.0f });
+    boundaryRect.setOrigin({ 150.f, 10.f });
+    boundaryRect.setPosition({ width / 2.0f, 510.0f });
     boundaryRect.setFillColor(sf::Color(190, 44, 35));
     boundaryRect.setOutlineThickness(4.f);
     boundaryRect.setOutlineColor(sf::Color(140, 90, 43));
 
     // bossHealth
-    RectangleShape bossHealth({500.0f, 20.0f});
-    bossHealth.setOrigin({250.f, 10.f});
-    bossHealth.setPosition({400.0f, 100.0f});
+    RectangleShape bossHealth({ 500.0f, 20.0f });
+    bossHealth.setOrigin({ 250.f, 10.f });
+    bossHealth.setPosition({ 400.0f, 100.0f });
     bossHealth.setFillColor(Color(155, 40, 230));
 
     // boss health bar underneath and border :
-    RectangleShape healthBoundary({500.f, 20.f});
-    healthBoundary.setOrigin({250.f, 10.f});
-    healthBoundary.setPosition({400.f, 100.f});
+    RectangleShape healthBoundary({ 500.f, 20.f });
+    healthBoundary.setOrigin({ 250.f, 10.f });
+    healthBoundary.setPosition({ 400.f, 100.f });
     healthBoundary.setOutlineThickness(4.f);
     healthBoundary.setOutlineColor(Color(220, 25, 40));
     healthBoundary.setFillColor(Color(50, 180, 255));
@@ -1623,20 +1623,20 @@ int main()
     }
 
     Sprite blazeRod(rod);
-    blazeRod.setScale({0.37f, 0.37f});
+    blazeRod.setScale({ 0.37f, 0.37f });
 
     Vector2u rodSize = rod.getSize();
     // set to left corner
-    blazeRod.setOrigin({0, float(rodSize.y)});
-    blazeRod.setPosition({406.f, 306.f});
+    blazeRod.setOrigin({ 0, float(rodSize.y) });
+    blazeRod.setPosition({ 406.f, 306.f });
 
     // Boss Sprite Setup
     Sprite Bosssprite(texture3);
     FloatRect bossbounds = Bosssprite.getLocalBounds();
-    Bosssprite.setScale({0.1f, 0.1f});
-    Bosssprite.setOrigin({bossbounds.size.x / 2.f, bossbounds.size.y / 2.f});
-    Bosssprite.setPosition({width / 2.0f, 240.0f});
-    Text bossName = createCenteredText(font, "MEHMOOD SAHAB", 15, {400.f, 75.f}, Color(255, 255, 255, 200));
+    Bosssprite.setScale({ 0.1f, 0.1f });
+    Bosssprite.setOrigin({ bossbounds.size.x / 2.f, bossbounds.size.y / 2.f });
+    Bosssprite.setPosition({ width / 2.0f, 240.0f });
+    Text bossName = createCenteredText(font, "MEHMOOD SAHAB", 15, { 400.f, 75.f }, Color(255, 255, 255, 200));
 
     // Texture magic/ new projectile;
     Texture magic;
@@ -1653,16 +1653,16 @@ int main()
     }
     Sprite playerShot(playerProj);
     Vector2u shootSize = playerProj.getSize();
-    playerShot.setScale({0.5f, 0.5f});
-    playerShot.setOrigin({shootSize.x / 2.f, shootSize.y / 2.f});
+    playerShot.setScale({ 0.5f, 0.5f });
+    playerShot.setOrigin({ shootSize.x / 2.f, shootSize.y / 2.f });
 
     // magic attack sprite setup
     Sprite MagicAttack(magic);
     MagicAttack.setTexture(magic);
-    MagicAttack.setScale({5.f, 5.f});
+    MagicAttack.setScale({ 5.f, 5.f });
     Vector2u proj2size = magic.getSize();
-    MagicAttack.setOrigin({proj2size.x / 2.0f, proj2size.y / 2.0f});
-    MagicAttack.setPosition({200.f, 300.f});
+    MagicAttack.setOrigin({ proj2size.x / 2.0f, proj2size.y / 2.0f });
+    MagicAttack.setPosition({ 200.f, 300.f });
 
     // Crystal Projectile that will be fired like a machine gun randomly
     Texture crystal;
@@ -1671,44 +1671,44 @@ int main()
 
     Sprite fallingCrystal(crystal);
     fallingCrystal.setTexture(crystal);
-    fallingCrystal.setScale({1.f, 1.f});
+    fallingCrystal.setScale({ 1.f, 1.f });
     Vector2u proj3size = crystal.getSize();
-    fallingCrystal.setOrigin({proj3size.x / 2.0f, proj3size.y / 2.0f});
+    fallingCrystal.setOrigin({ proj3size.x / 2.0f, proj3size.y / 2.0f });
 
     // Player Sprite Setup
     Sprite Playersprite(hearts);
     FloatRect playerbounds = Playersprite.getLocalBounds();
-    Playersprite.setScale({scaling[currentHeart], scaling[currentHeart]});
-    Playersprite.setOrigin({playerbounds.size.x / 2.0f, playerbounds.size.y / 2.0f});
+    Playersprite.setScale({ scaling[currentHeart], scaling[currentHeart] });
+    Playersprite.setOrigin({ playerbounds.size.x / 2.0f, playerbounds.size.y / 2.0f });
     Playersprite.setPosition(battleBox.getPosition());
 
     // playerIcon next to updated health bar location (Haras)
     Sprite playerIcon(hearts);
-    playerIcon.setScale({scaling[currentHeart], scaling[currentHeart]});
-    playerIcon.setOrigin({playerbounds.size.x / 2.f, playerbounds.size.y / 2.0f});
-    playerIcon.setPosition({225.f, 510.f});
+    playerIcon.setScale({ scaling[currentHeart], scaling[currentHeart] });
+    playerIcon.setOrigin({ playerbounds.size.x / 2.f, playerbounds.size.y / 2.0f });
+    playerIcon.setPosition({ 225.f, 510.f });
 
     // Indicator of parry with icon
-    CircleShape cooldownRing({15.f});
-    cooldownRing.setOrigin({15.f, 15.f});
+    CircleShape cooldownRing({ 15.f });
+    cooldownRing.setOrigin({ 15.f, 15.f });
     cooldownRing.setPosition(playerIcon.getPosition()); // setting origin as same so it covers uniformally
     cooldownRing.setFillColor(Color::Transparent);
-    cooldownRing.setOutlineThickness({4.f});
+    cooldownRing.setOutlineThickness({ 4.f });
     cooldownRing.setOutlineColor(Color::Cyan);
 
     // rectangle shape for covering the ring to show cooldown ;
-    RectangleShape cover({40.f, 44.f});
-    cover.setOrigin({20.f, 22.f});
+    RectangleShape cover({ 40.f, 44.f });
+    cover.setOrigin({ 20.f, 22.f });
     cover.setPosition(playerIcon.getPosition());
     cover.setFillColor(Color(120, 120, 30, 230));
 
     //taskbar icon
 
-    Image gameIcon ;
+    Image gameIcon;
     //if load then we apply it in the icon
 
-    if (gameIcon.loadFromFile("Assets/boss_sprite_phase3.jpg")){
-        window.setIcon(gameIcon.getSize(),gameIcon.getPixelsPtr());
+    if (gameIcon.loadFromFile("Assets/boss_sprite_phase3.jpg")) {
+        window.setIcon(gameIcon.getSize(), gameIcon.getPixelsPtr());
     }
 
 
@@ -1747,25 +1747,25 @@ int main()
     // Projectile sprite template
     Sprite projSprite(texture2);
     FloatRect projBounds = projSprite.getLocalBounds();
-    projSprite.setScale({0.8f, 0.8f});
-    projSprite.setOrigin({projBounds.size.x / 2.f, projBounds.size.y / 2.f});
+    projSprite.setScale({ 0.8f, 0.8f });
+    projSprite.setOrigin({ projBounds.size.x / 2.f, projBounds.size.y / 2.f });
 
     //texture for new sprite phase 3
-    Texture meteor ;
-    if (!meteor.loadFromFile("Assets/newMeteor.png")){
-        return -1 ;
+    Texture meteor;
+    if (!meteor.loadFromFile("Assets/newMeteor.png")) {
+        return -1;
     }
-    Sprite meteorProj (meteor) ;
-    Vector2u meteorSize = meteor.getSize() ;
-    meteorProj.setOrigin({meteorSize.x/2.f , meteorSize.y*0.72f}) ; // also taking note of the falme trail
-    meteorProj.setScale({1.f, 1.f}) ;
+    Sprite meteorProj(meteor);
+    Vector2u meteorSize = meteor.getSize();
+    meteorProj.setOrigin({ meteorSize.x / 2.f , meteorSize.y * 0.72f }); // also taking note of the falme trail
+    meteorProj.setScale({ 1.f, 1.f });
 
 
     // The Map texture yayyy 2nd phase woohoo
     vector<string> mapFiles = {
         "Assets/map_track.png",
         "Assets/map_track2.png",
-        "Assets/map_track3.png"};
+        "Assets/map_track3.png" };
     vector<Texture> mapTextures(mapFiles.size()); // store the textures in a vector (THIS IS SO COOL)
     vector<sf::Image> mapImages(mapFiles.size()); // need the images too for the pixels
     for (size_t i = 0; i < mapFiles.size(); i++)
@@ -1779,7 +1779,7 @@ int main()
     int mapindex = 0;                           // to cycle between the maps
     float mapbiggie = 1.4f;                     // map was too small when I initially used it soo yayy
     Sprite mapsprite(mapTextures[0]);           //
-    mapsprite.setScale({mapbiggie, mapbiggie}); // heh, just scaling
+    mapsprite.setScale({ mapbiggie, mapbiggie }); // heh, just scaling
 
     float halfwidth = mapTextures[2].getSize().x * 0.5f; // for map3 cuz it wasn't detecting the endpoint at the end of map 3
 
@@ -1790,25 +1790,25 @@ int main()
     };
 
     vector<Vector2f> finishline = {
-        {45.f, 115.f},                                                              // first map
-        {mapTextures[1].getSize().x * 0.305f, mapTextures[1].getSize().y * 0.055f}, // 2nd map
-        {halfwidth, mapTextures[2].getSize().y * 0.065f}                            // 3rd map
+        { 45.f, 115.f },                                                              // first map
+        { mapTextures[1].getSize().x * 0.305f, mapTextures[1].getSize().y * 0.055f }, // 2nd map
+        { halfwidth, mapTextures[2].getSize().y * 0.065f }                            // 3rd map
     };
 
     auto placemapstart = [&]() { // this is a function notation for when you wanna use functions in main. the & allows it to use all variables declared above it as referecne. omg tis so cool :3
         mapsprite.setTexture(mapTextures[mapindex], true);
         float texWidth = static_cast<float>(mapTextures[mapindex].getSize().x); // finds the pixel width of the map
         mapbiggie = static_cast<float>(width) / texWidth;                       // divides the screen width by pixel width
-        mapsprite.setScale({mapbiggie, mapbiggie});                             // makes sure the zooming in doesn't cut parts of the map out dyring scaling
+        mapsprite.setScale({ mapbiggie, mapbiggie });                             // makes sure the zooming in doesn't cut parts of the map out dyring scaling
         float mapheight = mapsprite.getGlobalBounds().size.y;
-        mapsprite.setPosition({0.0f, height - mapheight}); // put the rest of the map above the screen
-    };
+        mapsprite.setPosition({ 0.0f, height - mapheight }); // put the rest of the map above the screen
+        };
 
     auto playerspawnmap = [&]()
-    {
-        placemapstart();
-        Playersprite.setPosition({mapsprite.getPosition().x + starter[mapindex] * mapbiggie, height - 50.0f});
-    };
+        {
+            placemapstart();
+            Playersprite.setPosition({ mapsprite.getPosition().x + starter[mapindex] * mapbiggie, height - 50.0f });
+        };
     float invulnerabilitytimerMagicAttack = 0.0f;
     // created a diff for this 1 second immunity too much for this
 
@@ -1818,106 +1818,106 @@ int main()
     Music bgMusic;
     string currentMusicTrack = "";
 
-    auto playMusicTrack = [&](const string &trackPath)
-    {
-        if (trackPath == currentMusicTrack)
+    auto playMusicTrack = [&](const string& trackPath)
         {
-            if (bgMusic.getStatus() != SoundSource::Status::Playing && !trackPath.empty())
+            if (trackPath == currentMusicTrack)
             {
-                bgMusic.setVolume(musicVolume);
-                bgMusic.play();
+                if (bgMusic.getStatus() != SoundSource::Status::Playing && !trackPath.empty())
+                {
+                    bgMusic.setVolume(musicVolume);
+                    bgMusic.play();
+                }
+                return;
             }
-            return;
-        }
 
-        currentMusicTrack = trackPath;
-        bgMusic.stop();
+            currentMusicTrack = trackPath;
+            bgMusic.stop();
 
-        if (!trackPath.empty())
-        {
-            if (bgMusic.openFromFile(trackPath))
+            if (!trackPath.empty())
             {
-                bgMusic.setVolume(musicVolume);
-                bgMusic.setLooping(true);
-                bgMusic.play();
+                if (bgMusic.openFromFile(trackPath))
+                {
+                    bgMusic.setVolume(musicVolume);
+                    bgMusic.setLooping(true);
+                    bgMusic.play();
+                }
+                else
+                {
+                    cout << "FAILED TO LOAD MUSIC: " << trackPath << endl;
+                }
             }
-            else
-            {
-                cout << "FAILED TO LOAD MUSIC: " << trackPath << endl;
-            }
-        }
-    };
+        };
 
     playMusicTrack("Assets/menu_bgm.wav");
 
     auto resetToPhase1 = [&]()
-    {
-        Playersprite.setPosition(battleBox.getPosition());
-        activeProjectiles.clear();
-        magicPillar.clear();
-        crystalBurst.clear();
-        wavecount = 0;
-        currentphase = 1;
-        mapindex = 0;
-        invulnerabilitytimer = 0.0f;
-        placemapstart();
-        waveTriggerClock.restart();
-        playershooting.clear();
-        shootyclock.restart();
-        magicTimer.restart();
-        burstTimer.restart();
-        phase3Clock.restart(); // phase 3 (Haras)
-        bossHealth.setSize({500.0f, 20.0f});
-        invulnerabilitytimerMagicAttack = 0.0f;
-        isParrying = false;  // phase 3 (Haras)
-        cooldown = 0.0f;     // phase 3 (Haras)
-        parryTimer = 0.0f;   // phase 3 (Haras)
-        passiveHeal = false; // boss heal flag must not carry over into a new run
+        {
+            Playersprite.setPosition(battleBox.getPosition());
+            activeProjectiles.clear();
+            magicPillar.clear();
+            crystalBurst.clear();
+            wavecount = 0;
+            currentphase = 1;
+            mapindex = 0;
+            invulnerabilitytimer = 0.0f;
+            placemapstart();
+            waveTriggerClock.restart();
+            playershooting.clear();
+            shootyclock.restart();
+            magicTimer.restart();
+            burstTimer.restart();
+            phase3Clock.restart(); // phase 3 (Haras)
+            bossHealth.setSize({ 500.0f, 20.0f });
+            invulnerabilitytimerMagicAttack = 0.0f;
+            isParrying = false;  // phase 3 (Haras)
+            cooldown = 0.0f;     // phase 3 (Haras)
+            parryTimer = 0.0f;   // phase 3 (Haras)
+            passiveHeal = false; // boss heal flag must not carry over into a new run
 
-        // restore phase one boss sprite (Haras)
-        Bosssprite.setTexture(texture3, true); // resets bounding box back to phase 1 size (Haras)
-        Bosssprite.setScale({0.1f, 0.1f});     // boss scaling (Haras)
-        FloatRect p1Bounds = Bosssprite.getLocalBounds();
-        Bosssprite.setOrigin({p1Bounds.size.x / 2.f, p1Bounds.size.y / 2.f});
-        Bosssprite.setPosition({width / 2.0f, 240.0f});
+            // restore phase one boss sprite (Haras)
+            Bosssprite.setTexture(texture3, true); // resets bounding box back to phase 1 size (Haras)
+            Bosssprite.setScale({ 0.1f, 0.1f });     // boss scaling (Haras)
+            FloatRect p1Bounds = Bosssprite.getLocalBounds();
+            Bosssprite.setOrigin({ p1Bounds.size.x / 2.f, p1Bounds.size.y / 2.f });
+            Bosssprite.setPosition({ width / 2.0f, 240.0f });
 
-        playMusicTrack("Assets/phase1_bgm.wav");
-    };
+            playMusicTrack("Assets/phase1_bgm.wav");
+        };
 
     // phase 3 (Haras)
     auto enterPhase3 = [&]()
-    {
-        currentphase = 3;
-        Playersprite.setPosition(battleBox.getPosition());
-        activeProjectiles.clear();
-        magicPillar.clear();
-        crystalBurst.clear();
-        playershooting.clear();
-        bossHealth.setSize({500.0f, 20.0f});
-        invulnerabilitytimer = 1.0f;
-        isParrying = false;
-        cooldown = 0.0f;
-        parryTimer = 0.0f;
-        blazeRod.setColor(Color::White);
-        blazeRod.setRotation(degrees(0.0f));
-        phase3Clock.restart();
-        speech.setString("SPACE to deflect!");
-        phase3ThrowCount = 0;
-        Bosssprite.setColor(Color::White);
+        {
+            currentphase = 3;
+            Playersprite.setPosition(battleBox.getPosition());
+            activeProjectiles.clear();
+            magicPillar.clear();
+            crystalBurst.clear();
+            playershooting.clear();
+            bossHealth.setSize({ 500.0f, 20.0f });
+            invulnerabilitytimer = 1.0f;
+            isParrying = false;
+            cooldown = 0.0f;
+            parryTimer = 0.0f;
+            blazeRod.setColor(Color::White);
+            blazeRod.setRotation(degrees(0.0f));
+            phase3Clock.restart();
+            speech.setString("SPACE to deflect!");
+            phase3ThrowCount = 0;
+            Bosssprite.setColor(Color::White);
 
-        Bosssprite.setTexture(bossphase3tex, true); // reset bounding box for the new boss sprite (Haras)
-        FloatRect p3Bounds = Bosssprite.getLocalBounds();
-        Bosssprite.setOrigin({p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f});
-        float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y); // fixed clipping (Haras)
-        Bosssprite.setScale({p3Scale, p3Scale});                       // fixed clipping (Haras)
-        Bosssprite.setPosition({width / 2.0f, 240.0f});
-    };
+            Bosssprite.setTexture(bossphase3tex, true); // reset bounding box for the new boss sprite (Haras)
+            FloatRect p3Bounds = Bosssprite.getLocalBounds();
+            Bosssprite.setOrigin({ p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f });
+            float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y); // fixed clipping (Haras)
+            Bosssprite.setScale({ p3Scale, p3Scale });                       // fixed clipping (Haras)
+            Bosssprite.setPosition({ width / 2.0f, 240.0f });
+        };
 
     // Hazard trail dot shape
     // Use the created flame sprite / texture pack here
     CircleShape hazardDot(3.0f);
     hazardDot.setFillColor(Color(255, 69, 0, 200));
-    hazardDot.setOrigin({3.0f, 3.0f});
+    hazardDot.setOrigin({ 3.0f, 3.0f });
 
     // used to change current state of game from menu too playing ;
     // change this and add an endless mode also make it go back to menu if escape pressed during the playing stage
@@ -1950,172 +1950,172 @@ int main()
     bool cutsceneProjActive = false;
     int popupHovered = -1;
 
-    RectangleShape popupBox({460.f, 180.f});
-    popupBox.setOrigin({230.f, 90.f});
-    popupBox.setPosition({width / 2.f, height / 2.f});
+    RectangleShape popupBox({ 460.f, 180.f });
+    popupBox.setOrigin({ 230.f, 90.f });
+    popupBox.setPosition({ width / 2.f, height / 2.f });
     popupBox.setFillColor(Color(15, 15, 22, 245));
     popupBox.setOutlineColor(Color::Red);
     popupBox.setOutlineThickness(3.f);
 
-    Text popupPrompt = createCenteredText(font, "Do you..... wish to end it here?", 20, {width / 2.f, height / 2.f - 35.f}, Color::White);
-    Text popupYes = createCenteredText(font, "YES", 24, {width / 2.f - 85.f, height / 2.f + 35.f}, Color(180, 180, 180));
-    Text popupNo = createCenteredText(font, "NO", 24, {width / 2.f + 85.f, height / 2.f + 35.f}, Color(180, 180, 180));
+    Text popupPrompt = createCenteredText(font, "Do you..... wish to end it here?", 20, { width / 2.f, height / 2.f - 35.f }, Color::White);
+    Text popupYes = createCenteredText(font, "YES", 24, { width / 2.f - 85.f, height / 2.f + 35.f }, Color(180, 180, 180));
+    Text popupNo = createCenteredText(font, "NO", 24, { width / 2.f + 85.f, height / 2.f + 35.f }, Color(180, 180, 180));
 
     auto showLine = [&]()
-    {
-        dialogueSound.stop();
-        if (!dialogueLines[dialogueIndex].sound.empty())
         {
-            if (dialogueBuffer.loadFromFile(dialogueLines[dialogueIndex].sound))
+            dialogueSound.stop();
+            if (!dialogueLines[dialogueIndex].sound.empty())
             {
-                dialogueSound.setBuffer(dialogueBuffer);
-                dialogueSound.setVolume(soundVolume);
-                dialogueSound.play();
+                if (dialogueBuffer.loadFromFile(dialogueLines[dialogueIndex].sound))
+                {
+                    dialogueSound.setBuffer(dialogueBuffer);
+                    dialogueSound.setVolume(soundVolume);
+                    dialogueSound.play();
+                }
+                else
+                {
+                    cout << "FAILED TO LOAD: " << dialogueLines[dialogueIndex].sound << endl;
+                }
+                if (dialogueContext == 2 && dialogueIndex == 10)
+                {
+                    Bosssprite.setTexture(bossphase3tex, true);
+                    FloatRect p3Bounds = Bosssprite.getLocalBounds();
+                    Bosssprite.setOrigin({ p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f });
+                    float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y);
+                    Bosssprite.setScale({ p3Scale, p3Scale });
+                    Bosssprite.setPosition({ width / 2.0f, 240.0f });
+                }
             }
-            else
-            {
-                cout << "FAILED TO LOAD: " << dialogueLines[dialogueIndex].sound << endl;
-            }
-            if (dialogueContext == 2 && dialogueIndex == 10)
-            {
-                Bosssprite.setTexture(bossphase3tex, true);
-                FloatRect p3Bounds = Bosssprite.getLocalBounds();
-                Bosssprite.setOrigin({p3Bounds.size.x / 2.f, p3Bounds.size.y / 2.f});
-                float p3Scale = 155.f / max(p3Bounds.size.x, p3Bounds.size.y);
-                Bosssprite.setScale({p3Scale, p3Scale});
-                Bosssprite.setPosition({width / 2.0f, 240.0f});
-            }
-        }
-    };
+        };
 
     auto startDialogue = [&](int context)
-    {
-        dialogueContext = context;
-        dialogueIndex = 0;
-        if (context == 1)
         {
-            dialogueLines = {
-                {"Oh....", Color::Black, "Assets/voice1.wav"},
-                {"So.....", Color::Black, "Assets/voice1.wav"},
-                {"You decided\nto come challenge me?", Color::Black, "Assets/voice1.wav"},
-                {"Oh well", Color::Black, "Assets/voice1.wav"},
-                {"You weren't\nthe first", Color::Black, "Assets/voice1.wav"},
-                {"And you certainly\nwon't be the last", Color::Black, "Assets/voice1.wav"},
-                {"Well then.....", Color::Black, "Assets/voice1.wav"},
-                {"Come at me.", Color::Blue, "Assets/voice1.wav"},
-            };
-        }
-        else if (context == 2)
-        {
-            dialogueLines = {
-                {"AGHHh", Color::Black, "Assets/voice1.wav"},
-                {"....", Color::Black, "Assets/voice1.wav"},
-                {"How...??", Color::Black, "Assets/voice1.wav"},
-                {"Just how???", Color::Black, "Assets/voice1.wav"},
-                {"How did you get\nthis power?", Color::Black, "Assets/voice1.wav"},
-                {"I....", Color::Black, "Assets/voice1.wav"},
-                {"I can't die here.", Color::Black, "Assets/voice1.wav"},
-                {"No I can't", Color::Black, "Assets/voice1.wav"},
-                {"Ive never been\ndefeated before", Color::Black, "Assets/voice1.wav"},
-                {"....", Color::Black, "Assets/voice1.wav"},
-                {"And I never will", Color::Red, "Assets/voice1.wav"},
-                {"AHahhahHhahHAHha", Color::Red, "Assets/laugh.wav"},
-                {"Just what did\nyou think?", Color::Red, "Assets/voice1.wav"},
-                {"That id go\ndown this easy?", Color::Black, "Assets/voice1.wav"},
-                {"That im just some\nfodder for you to defeat?", Color::Black, "Assets/voice1.wav"},
-                {"Foolish", Color::Black, "Assets/voice1.wav"},
-                {"Pathetic", Color::Black, "Assets/voice1.wav"},
-                {"My powers.....", Color::Black, "Assets/voice1.wav"},
-                {"They're beyond your\nmeagre comprehension", Color::Black, "Assets/voice1.wav"},
-                {"Curious?", Color::Black, "Assets/voice1.wav"},
-                {"Take a look.", Color::Red, ""},
-            };
-        }
-        else if (context == 3)
-        {
-            // after the maps finish(Boss might be salty tbh)
-            dialogueLines = {
-                {"Heheahehahehae", Color::Black, "Assets/laugh.wav"},
-                {"It's so funny to be honest", Color::Black, "Assets/voice1.wav"},
-                {"Seeing you miserably\nstruggle for survival", Color::Red, "Assets/voice1.wav"},
-                {"Now now", Color::Black, "Assets/voice1.wav"},
-                {"I think", Color::Black, "Assets/voice1.wav"},
-                {"It's time", Color::Black, "Assets/voice1.wav"},
-                {"You stopped bothering me", Color::Black, ""},
-                {"To hell with you\nannoying prick", Color::Black, ""},
-            };
-        }
-        else if (context == 4)
-        {
-            // OH THE BOSS IS SALTY, OH THEY'RE SO SALTY
-            dialogueLines = {
-                {"What.", Color::Black, "Assets/voice1.wav"},
-                {"WHAT?", Color::Red, "Assets/voice1.wav"},
-                {"HOW ARE YOU\nSTILL ALIVE?", Color::Red, "Assets/voice1.wav"},
-                {"JUST DIE ALREADY", Color::Red, "Assets/voice1.wav"},
+            dialogueContext = context;
+            dialogueIndex = 0;
+            if (context == 1)
+            {
+                dialogueLines = {
+                    { "Oh....", Color::Black, "Assets/voice1.wav" },
+                    { "So.....", Color::Black, "Assets/voice1.wav" },
+                    { "You decided\nto come challenge me?", Color::Black, "Assets/voice1.wav" },
+                    { "Oh well", Color::Black, "Assets/voice1.wav" },
+                    { "You weren't\nthe first", Color::Black, "Assets/voice1.wav" },
+                    { "And you certainly\nwon't be the last", Color::Black, "Assets/voice1.wav" },
+                    { "Well then.....", Color::Black, "Assets/voice1.wav" },
+                    { "Come at me.", Color::Blue, "Assets/voice1.wav" },
+                };
+            }
+            else if (context == 2)
+            {
+                dialogueLines = {
+                    { "AGHHh", Color::Black, "Assets/voice1.wav" },
+                    { "....", Color::Black, "Assets/voice1.wav" },
+                    { "How...??", Color::Black, "Assets/voice1.wav" },
+                    { "Just how???", Color::Black, "Assets/voice1.wav" },
+                    { "How did you get\nthis power?", Color::Black, "Assets/voice1.wav" },
+                    { "I....", Color::Black, "Assets/voice1.wav" },
+                    { "I can't die here.", Color::Black, "Assets/voice1.wav" },
+                    { "No I can't", Color::Black, "Assets/voice1.wav" },
+                    { "Ive never been\ndefeated before", Color::Black, "Assets/voice1.wav" },
+                    { "....", Color::Black, "Assets/voice1.wav" },
+                    { "And I never will", Color::Red, "Assets/voice1.wav" },
+                    { "AHahhahHhahHAHha", Color::Red, "Assets/laugh.wav" },
+                    { "Just what did\nyou think?", Color::Red, "Assets/voice1.wav" },
+                    { "That id go\ndown this easy?", Color::Black, "Assets/voice1.wav" },
+                    { "That im just some\nfodder for you to defeat?", Color::Black, "Assets/voice1.wav" },
+                    { "Foolish", Color::Black, "Assets/voice1.wav" },
+                    { "Pathetic", Color::Black, "Assets/voice1.wav" },
+                    { "My powers.....", Color::Black, "Assets/voice1.wav" },
+                    { "They're beyond your\nmeagre comprehension", Color::Black, "Assets/voice1.wav" },
+                    { "Curious?", Color::Black, "Assets/voice1.wav" },
+                    { "Take a look.", Color::Red, "" },
+                };
+            }
+            else if (context == 3)
+            {
+                // after the maps finish(Boss might be salty tbh)
+                dialogueLines = {
+                    { "Heheahehahehae", Color::Black, "Assets/laugh.wav" },
+                    { "It's so funny to be honest", Color::Black, "Assets/voice1.wav" },
+                    { "Seeing you miserably\nstruggle for survival", Color::Red, "Assets/voice1.wav" },
+                    { "Now now", Color::Black, "Assets/voice1.wav" },
+                    { "I think", Color::Black, "Assets/voice1.wav" },
+                    { "It's time", Color::Black, "Assets/voice1.wav" },
+                    { "You stopped bothering me", Color::Black, "" },
+                    { "To hell with you\nannoying prick", Color::Black, "" },
+                };
+            }
+            else if (context == 4)
+            {
+                // OH THE BOSS IS SALTY, OH THEY'RE SO SALTY
+                dialogueLines = {
+                    { "What.", Color::Black, "Assets/voice1.wav" },
+                    { "WHAT?", Color::Red, "Assets/voice1.wav" },
+                    { "HOW ARE YOU\nSTILL ALIVE?", Color::Red, "Assets/voice1.wav" },
+                    { "JUST DIE ALREADY", Color::Red, "Assets/voice1.wav" },
 
-            };
-        }
+                };
+            }
 
-        playMusicTrack(""); // silence during dialogue
-        showLine();
-        changeState = 4;
-    };
+            playMusicTrack(""); // silence during dialogue
+            showLine();
+            changeState = 4;
+        };
 
     auto startPhase2 = [&]()
-    {
-        currentphase = 2;
-        mapindex = 0;
-        activeProjectiles.clear();
-        magicPillar.clear();
-        crystalBurst.clear();
-        playershooting.clear();
-        playerspawnmap();
-    };
+        {
+            currentphase = 2;
+            mapindex = 0;
+            activeProjectiles.clear();
+            magicPillar.clear();
+            crystalBurst.clear();
+            playershooting.clear();
+            playerspawnmap();
+        };
 
     auto endDialogue = [&]()
-    {
-        if (dialogueContext == 1)
         {
-            playMusicTrack("Assets/phase1_bgm.wav");
-        }
-        else if (dialogueContext == 2)
-        {
-            startPhase2();
-            playMusicTrack("Assets/phase2_bgm.wav");
-        }
-        else if (dialogueContext == 3)
-        {
-            cutsceneProj.position = Bosssprite.getPosition();
-            cutsceneProj.isLaunched = true;
-            cutsceneProj.tracksPlayer = false;
-            cutsceneProj.leavesTrail = false;
-            cutsceneProj.hitBox = 14.f;
+            if (dialogueContext == 1)
+            {
+                playMusicTrack("Assets/phase1_bgm.wav");
+            }
+            else if (dialogueContext == 2)
+            {
+                startPhase2();
+                playMusicTrack("Assets/phase2_bgm.wav");
+            }
+            else if (dialogueContext == 3)
+            {
+                cutsceneProj.position = Bosssprite.getPosition();
+                cutsceneProj.isLaunched = true;
+                cutsceneProj.tracksPlayer = false;
+                cutsceneProj.leavesTrail = false;
+                cutsceneProj.hitBox = 14.f;
 
-            Vector2f dir = Playersprite.getPosition() - cutsceneProj.position;
-            float len = sqrt(dir.x * dir.x + dir.y * dir.y);
-            if (len != 0.f)
-                dir /= len;
-            cutsceneProj.velocity = dir * 18.f;
+                Vector2f dir = Playersprite.getPosition() - cutsceneProj.position;
+                float len = sqrt(dir.x * dir.x + dir.y * dir.y);
+                if (len != 0.f)
+                    dir /= len;
+                cutsceneProj.velocity = dir * 18.f;
 
-            cutsceneProjActive = true;
+                cutsceneProjActive = true;
+                dialogueContext = 0;
+                changeState = 5; // Go to scripted projectile launch
+                return;          // Exit early so changeState doesn't get set to 2 below
+            }
+            else if (dialogueContext == 4)
+            {
+                playMusicTrack("Assets/phase3_bgm.wav");
+            }
+
             dialogueContext = 0;
-            changeState = 5; // Go to scripted projectile launch
-            return;          // Exit early so changeState doesn't get set to 2 below
-        }
-        else if (dialogueContext == 4)
-        {
-            playMusicTrack("Assets/phase3_bgm.wav");
-        }
-
-        dialogueContext = 0;
-        waveTriggerClock.restart();
-        magicTimer.restart();
-        burstTimer.restart();
-        shootyclock.restart();
-        phase3Clock.restart();
-        changeState = 2;
-    };
+            waveTriggerClock.restart();
+            magicTimer.restart();
+            burstTimer.restart();
+            shootyclock.restart();
+            phase3Clock.restart();
+            changeState = 2;
+        };
     float endLesstime = 0.0f;
     bool endless = false;
     int currentScore = 0;
@@ -2140,11 +2140,11 @@ int main()
 
     Text endlessScoreText(font, "SCORE: 0", 22);
     endlessScoreText.setFillColor(Color::White);
-    endlessScoreText.setPosition({25.f, 20.f});
+    endlessScoreText.setPosition({ 25.f, 20.f });
 
     Text endlessBestText(font, "HIGH SCORE: " + to_string(highScore), 22);
     endlessBestText.setFillColor(Color::Yellow);
-    endlessBestText.setPosition({25.f, 50.f});
+    endlessBestText.setPosition({ 25.f, 50.f });
     while (window.isOpen())
     {
         float dt = frameClock.restart().asSeconds();
@@ -2196,9 +2196,9 @@ int main()
                     invulnerabilitytimer = 0.0f; // no leftover invunerability frames cuz I can't have the players getting too comfy
                     waveTriggerClock.restart();  // resets attack timings
                     shakeTimer = 0.0f;           // resets shakeTimer
-                    healthBar.setSize({300.f, 20.f});
+                    healthBar.setSize({ 300.f, 20.f });
                     healthBar.setFillColor(Color(57, 255, 20));
-                    bossHealth.setSize({500.f, 20.f});
+                    bossHealth.setSize({ 500.f, 20.f });
                     passiveHeal = false; // boss starts fresh (not healing / not in final form) on a new run
                     magicTimer.restart();
                     burstTimer.restart();
@@ -2212,9 +2212,9 @@ int main()
 
                     Bosssprite.setTexture(texture3, true);
                     FloatRect bounds = Bosssprite.getLocalBounds();
-                    Bosssprite.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-                    Bosssprite.setScale({0.1f, 0.1f});
-                    Bosssprite.setPosition({width / 2.0f, 240.0f});
+                    Bosssprite.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
+                    Bosssprite.setScale({ 0.1f, 0.1f });
+                    Bosssprite.setPosition({ width / 2.0f, 240.0f });
 
                     burstDelay = 10.f;
 
@@ -2223,23 +2223,23 @@ int main()
                     blazeRod.setRotation(degrees(0.0f));
                 }
                 frameClock.restart();                          // prevent dt jump on first frame
-                view.setCenter({width / 2.0f, height / 2.0f}); // snaps back to center
+                view.setCenter({ width / 2.0f, height / 2.0f }); // snaps back to center
                 window.setView(view);                          // implements the view
             }
             // integrated soundvolume and musicVolume variable
             rendering(window, starBackground, currentState, titletext, mainMenuItems, deathMenuItems,
                 victoryMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume,
-                musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug , endless , currentScore , highScore);
+                musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug, endless, currentScore, highScore);
             window.display();
         }
         else
         {
-            if (changeState == 10 ){
-                endless = true ;
+            if (changeState == 10) {
+                endless = true;
                 playMusicTrack("Assets/phase1_bgm.wav"); // also playing the audio for endless
             }
             //so preserve and death doesnt take back to story mode
-            else if (changeState ==2 && endless){
+            else if (changeState == 2 && endless) {
                 //also setting current score back to 0
 
                 if (previousState != GameState::Paused)
@@ -2253,7 +2253,7 @@ int main()
             }
             if (changeState == 2 && debug.jumpPhase != 0)
             { // for debug menu (Haras)
-                healthBar.setSize({300.f, 20.f});
+                healthBar.setSize({ 300.f, 20.f });
                 healthBar.setFillColor(Color(57, 255, 20));
                 shakeTimer = 0.0f;
                 introDone = true;
@@ -2281,7 +2281,7 @@ int main()
                 introDone = true;
                 startDialogue(1);
             }
-            if (changeState == 2||  changeState == 10)
+            if (changeState == 2 || changeState == 10)
             {
                 while (const optional<Event> event = window.pollEvent())
                 {
@@ -2289,7 +2289,7 @@ int main()
                     {
                         window.close();
                     }
-                    else if (const auto *keyPressed = event->getIf<Event::KeyPressed>())
+                    else if (const auto* keyPressed = event->getIf<Event::KeyPressed>())
                     {
                         if (keyPressed->scancode == Keyboard::Scancode::Escape)
                         {
@@ -2318,12 +2318,12 @@ int main()
                 if (currentphase == 2)
                 { // to ensure you cant go outside map bounds (Haras)
                     Vector2f newpos = Playersprite.getPosition();
-                    if (mapcollission(mapImages[mapindex], mapsprite, {newpos.x, oldplayerpos.y}))
+                    if (mapcollission(mapImages[mapindex], mapsprite, { newpos.x, oldplayerpos.y }))
                     {
                         newpos.x = oldplayerpos.x;
                         hitwallphase2 = true;
                     }
-                    if (mapcollission(mapImages[mapindex], mapsprite, {newpos.x, newpos.y}))
+                    if (mapcollission(mapImages[mapindex], mapsprite, { newpos.x, newpos.y }))
                     {
                         newpos.y = oldplayerpos.y;
                         hitwallphase2 = true;
@@ -2338,10 +2338,10 @@ int main()
                     // keeps player on path if the scrolling top wall pushes into them, also fixed a bug where if map push you out of path, it was not allowing you to move, keeping you stuck (Haras)
                     float oldMapY = mapsprite.getPosition().y;
                     // the following code is cuz omg I didn't include this and the map scrolled off the screen AND IT CONSIDERED IT OUT OF BOUNDS AND I WAS DYING AAAA
-                    mapsprite.move({0.0f, mapscrollspeed * dt});
+                    mapsprite.move({ 0.0f, mapscrollspeed * dt });
                     if (mapsprite.getPosition().y > 0.0f)
                     {
-                        mapsprite.setPosition({mapsprite.getPosition().x, 0.0f});
+                        mapsprite.setPosition({ mapsprite.getPosition().x, 0.0f });
                     }
                     // keeps player on path if the scrolling wall pushes into them (Haras)
                     float scrollDelta = mapsprite.getPosition().y - oldMapY;
@@ -2352,7 +2352,7 @@ int main()
                         bool recovered = false;
                         // tries riding down with the map scroll (Haras)
                         if (scrollDelta > 0.0f && p.y + scrollDelta <= height - 8.0f &&
-                            !mapcollission(mapImages[mapindex], mapsprite, {p.x, p.y + scrollDelta}))
+                            !mapcollission(mapImages[mapindex], mapsprite, { p.x, p.y + scrollDelta }))
                         {
                             p.y += scrollDelta;
                             Playersprite.setPosition(p);
@@ -2364,7 +2364,7 @@ int main()
                         {
                             for (float r = 2.0f; r <= 12.0f && !recovered; r += 2.0f)
                             {
-                                Vector2f offsets[4] = {{0.f, -r}, {0.f, r}, {-r, 0.f}, {r, 0.f}};
+                                Vector2f offsets[4] = { { 0.f, -r },{ 0.f, r },{ -r, 0.f },{ r, 0.f } };
                                 for (auto off : offsets)
                                 {
                                     Vector2f testPos = p + off;
@@ -2399,13 +2399,13 @@ int main()
                             }
                             else
                             {
-
+                                mapindex = 0; // prevent out of range vector access before cutscene starts (Haras)
                                 activeProjectiles.clear();
                                 magicPillar.clear();
                                 crystalBurst.clear();
                                 playershooting.clear();
                                 Playersprite.setPosition(battleBox.getPosition());
-                                Bosssprite.setPosition({width / 2.0f, 240.0f});
+                                Bosssprite.setPosition({ width / 2.0f, 240.0f });
                                 startDialogue(3);
                             }
                         }
@@ -2421,9 +2421,9 @@ int main()
                         magicTimer.restart();
                         burstTimer.restart();
                     }
-                   //calculation ;
-                    if (changeState==10){
-                        endLesstime +=dt ;
+                    //calculation ;
+                    if (changeState == 10) {
+                        endLesstime += dt;
                         //formula reward player for more score if the difficulty more
                         currentScore = static_cast<int>(endLesstime * 100 * (difficultyIndex + 1));
 
@@ -2440,7 +2440,7 @@ int main()
                     }
 
                     bool nextwave = false;
-                    if (wavecount <= 3 )
+                    if (wavecount <= 3)
                     { // this is only for the first crescent waves
                         nextwave = allLaunched(activeProjectiles);
                     }
@@ -2485,17 +2485,17 @@ int main()
                         }
                         else if (wavecount == 6)
                         {
-                            pinwheel(activeProjectiles, {middleX, battleBox.getPosition().y + 50}, projectileSpeed);
-                            pinwheel(activeProjectiles, {rightX - 50.f, battleBox.getPosition().y - 50}, projectileSpeed);
-                            pinwheel(activeProjectiles, {leftX + 50.f, battleBox.getPosition().y - 50}, projectileSpeed);
+                            pinwheel(activeProjectiles, { middleX, battleBox.getPosition().y + 50 }, projectileSpeed);
+                            pinwheel(activeProjectiles, { rightX - 50.f, battleBox.getPosition().y - 50 }, projectileSpeed);
+                            pinwheel(activeProjectiles, { leftX + 50.f, battleBox.getPosition().y - 50 }, projectileSpeed);
                         }
                         else if (wavecount == 7)
                         {
-                            pinwheel(activeProjectiles, {rightX, battleBox.getPosition().y}, projectileSpeed);
+                            pinwheel(activeProjectiles, { rightX, battleBox.getPosition().y }, projectileSpeed);
                         }
                         else if (wavecount == 8)
                         {
-                            pinwheel(activeProjectiles, {leftX, battleBox.getPosition().y}, projectileSpeed);
+                            pinwheel(activeProjectiles, { leftX, battleBox.getPosition().y }, projectileSpeed);
                         }
                         else if (wavecount == 9)
                         {
@@ -2512,8 +2512,8 @@ int main()
 
                         wavecount = (wavecount + 1) % 12;
                         //random nature after first 12 waves
-                        if ( changeState == 10 && endLesstime >=35.f ) {
-                            wavecount = rand() %12 ;
+                        if (changeState == 10 && endLesstime >= 35.f) {
+                            wavecount = rand() % 12;
                         }
                     }
 
@@ -2535,7 +2535,7 @@ int main()
                     }
 
                     // Change Phase 1 boss sprite based on remaining HP (max bar width = 500.f)
-                    if (changeState!=10) {
+                    if (changeState != 10) {
                         float hp = bossHealth.getSize().x;
 
                         // once the boss drops to the final third it enters its final form and keeps it (passiveHeal),
@@ -2544,40 +2544,40 @@ int main()
                         {
                             Bosssprite.setTexture(bossFinalStage, true);
                             FloatRect b = Bosssprite.getLocalBounds();
-                            Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-                            Bosssprite.setScale({0.14f, 0.14f}); // Adjust scale for bossFinalStage.png
-                            Bosssprite.setPosition({width / 2.0f, 230.0f});
+                            Bosssprite.setOrigin({ b.size.x / 2.f, b.size.y / 2.f });
+                            Bosssprite.setScale({ 0.14f, 0.14f }); // Adjust scale for bossFinalStage.png
+                            Bosssprite.setPosition({ width / 2.0f, 230.0f });
                             passiveHeal = true;
 
                             // passive heal: slowly regenerates up to 400, never while the boss is at/below 0 so it can't undo a killing blow
                             if (hp > 0.0f && hp <= 400.f)
-                                bossHealth.setSize({min(400.f, hp + 5.f * dt), 20.f});
+                                bossHealth.setSize({ min(400.f, hp + 5.f * dt), 20.f });
                         }
                         else if (hp <= 300.0f) // below 60-30 stage 2 ;
                         {
                             Bosssprite.setTexture(bossStage2, true);
                             FloatRect b = Bosssprite.getLocalBounds();
-                            Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-                            Bosssprite.setScale({0.12f, 0.12f}); // Adjust scale for bossStage2.png
-                            Bosssprite.setPosition({width / 2.0f, 235.0f});
+                            Bosssprite.setOrigin({ b.size.x / 2.f, b.size.y / 2.f });
+                            Bosssprite.setScale({ 0.12f, 0.12f }); // Adjust scale for bossStage2.png
+                            Bosssprite.setPosition({ width / 2.0f, 235.0f });
                         }
                         else // default when hp above 60%
                         {
                             Bosssprite.setTexture(texture3, true);
                             FloatRect b = Bosssprite.getLocalBounds();
-                            Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-                            Bosssprite.setScale({0.1f, 0.1f});
-                            Bosssprite.setPosition({width / 2.0f, 240.0f});
+                            Bosssprite.setOrigin({ b.size.x / 2.f, b.size.y / 2.f });
+                            Bosssprite.setScale({ 0.1f, 0.1f });
+                            Bosssprite.setPosition({ width / 2.0f, 240.0f });
                         }
                     }
                 }
 
-                if (currentphase == 1 && changeState!=10 && Keyboard::isKeyPressed(Keyboard::Key::Space) && shootyclock.getElapsedTime().asSeconds() >= 0.25f) // shooting them projectiles rahhh. The 0.25 is to put the delay between each projectile so we don't become a minigun (teammates would never approve of the minigun tis so sad :[ )
+                if (currentphase == 1 && changeState != 10 && Keyboard::isKeyPressed(Keyboard::Key::Space) && shootyclock.getElapsedTime().asSeconds() >= 0.25f) // shooting them projectiles rahhh. The 0.25 is to put the delay between each projectile so we don't become a minigun (teammates would never approve of the minigun tis so sad :[ )
                 {
                     shootyclock.restart();
                     Projectile s;
                     s.position = Playersprite.getPosition();
-                    s.velocity = {0.f, -25.f};
+                    s.velocity = { 0.f, -25.f };
                     s.isLaunched = true;
                     s.tracksPlayer = false;
                     playershooting.push_back(s);
@@ -2607,8 +2607,8 @@ int main()
                 if (currentphase == 3)
                 {
                     updateParrying(blazeRod, Playersprite, Bosssprite.getPosition(), playerIcon,
-                                   cooldownRing, cover, activeProjectiles,
-                                   isParrying, parryTimer, cooldown, shakeTimer, dt);
+                        cooldownRing, cover, activeProjectiles,
+                        isParrying, parryTimer, cooldown, shakeTimer, dt);
                 }
 
                 // counts down the i-frames
@@ -2624,7 +2624,7 @@ int main()
                 {
                     for (int i = 0; i < (int)activeProjectiles.size();)
                     {
-                        Projectile &p = activeProjectiles[i];
+                        Projectile& p = activeProjectiles[i];
                         if (p.parried && Bosssprite.getGlobalBounds().contains(p.position))
                         {
                             healthBarUpdate(bossHealth, 20.f);
@@ -2643,7 +2643,7 @@ int main()
                             {
                                 shootSound.setVolume(soundVolume);
                                 shootSound.play();
-                                healthBarUpdate(healthBar, 20.f + 20*(difficultyIndex));
+                                healthBarUpdate(healthBar, 20.f + 20 * (difficultyIndex));
                                 shakeTimer = 0.3f;
                                 activeProjectiles.erase(activeProjectiles.begin() + i);
                             }
@@ -2667,10 +2667,11 @@ int main()
 
                 // Separate projectile hits from Phase 2 map collisions
                 bool projHit = (currentphase != 3 && collision(activeProjectiles, Playersprite.getPosition())) ||
-                               collision(crystalBurst, Playersprite.getPosition());
+                    collision(crystalBurst, Playersprite.getPosition());
 
-                bool mapHit = (currentphase == 2) &&
-                              (hitwallphase2 || mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition()));
+                // stop early so map collision skips during cutscenes and never indexes mapImages[3] (Haras)
+                bool mapHit = (currentphase == 2 && changeState == 2 && mapindex < (int)mapImages.size()) &&
+                    (hitwallphase2 || mapcollission(mapImages[mapindex], mapsprite, Playersprite.getPosition()));
 
                 if ((projHit || mapHit) && invulnerabilitytimer <= 0.0f)
                 {
@@ -2749,12 +2750,12 @@ int main()
                     // Below random number generation between positive, negative shakeIntensity (Haras)
                     float offsetX = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
                     float offsetY = ((rand() % 100) / 100.0f - 0.5f) * 2.0f * shakeIntesity;
-                    view.setCenter({(width / 2.0f) + offsetX, (height / 2.0f) + offsetY});
+                    view.setCenter({ (width / 2.0f) + offsetX, (height / 2.0f) + offsetY });
                 }
                 else
                 {
                     // Camera goes back to center when no shake (Haras)
-                    view.setCenter({width / 2.0f, height / 2.0f});
+                    view.setCenter({ width / 2.0f, height / 2.0f });
                 }
             }
             if (changeState == 4)
@@ -2765,7 +2766,7 @@ int main()
                     {
                         window.close();
                     }
-                    else if (const auto *key = event->getIf<Event::KeyPressed>())
+                    else if (const auto* key = event->getIf<Event::KeyPressed>())
                     {
                         if (key->code == Keyboard::Key::Enter)
                         {
@@ -2797,7 +2798,7 @@ int main()
                         cutsceneProjActive = false;
                         shootSound.setVolume(soundVolume);
                         shootSound.play();
-                        healthBar.setSize({0.f, 20.f});
+                        healthBar.setSize({ 0.f, 20.f });
                         shakeTimer = 0.4f;
                         changeState = 6; // cue the trick
                     }
@@ -2813,24 +2814,24 @@ int main()
                 {
                     popupHovered = 0;
                     popupYes.setFillColor(Color::Yellow);
-                    popupYes.setScale({1.15f, 1.15f});
+                    popupYes.setScale({ 1.15f, 1.15f });
                 }
                 else
                 {
                     popupYes.setFillColor(Color(180, 180, 180));
-                    popupYes.setScale({1.0f, 1.0f});
+                    popupYes.setScale({ 1.0f, 1.0f });
                 }
 
                 if (popupNo.getGlobalBounds().contains(mousePos))
                 {
                     popupHovered = 1;
                     popupNo.setFillColor(Color::Yellow);
-                    popupNo.setScale({1.15f, 1.15f});
+                    popupNo.setScale({ 1.15f, 1.15f });
                 }
                 else
                 {
                     popupNo.setFillColor(Color(180, 180, 180));
-                    popupNo.setScale({1.0f, 1.0f});
+                    popupNo.setScale({ 1.0f, 1.0f });
                 }
 
                 while (const optional<Event> event = window.pollEvent())
@@ -2838,7 +2839,7 @@ int main()
                     if (event->is<Event::Closed>())
                         window.close();
 
-                    if (const auto *mouseClick = event->getIf<Event::MouseButtonPressed>())
+                    if (const auto* mouseClick = event->getIf<Event::MouseButtonPressed>())
                     {
                         if (mouseClick->button == Mouse::Button::Left)
                         {
@@ -2850,7 +2851,7 @@ int main()
                             }
                             else if (popupHovered == 1) // so, thee decided to persevere. Exciting......
                             {
-                                healthBar.setSize({300.f, 20.f});
+                                healthBar.setSize({ 300.f, 20.f });
                                 healthBar.setFillColor(Color(57, 255, 20));
                                 enterPhase3();
                                 startDialogue(4); // cue the yapfest (endDialogue() will start BGM & set changeState = 2)
@@ -2888,7 +2889,7 @@ int main()
                     window.draw(battleBox);
                 }
                 window.draw(Bosssprite);
-                if (!isPostMapCutscene&& changeState!=10)
+                if (!isPostMapCutscene && changeState != 10)
                 {
                     window.draw(healthBoundary);
                     window.draw(bossHealth);
@@ -2908,13 +2909,13 @@ int main()
             }
 
             // draw the projectiles with the hazard trail
-            for (const auto &pillar : magicPillar)
+            for (const auto& pillar : magicPillar)
             {
                 MagicAttack.setPosition(pillar.position);
                 window.draw(MagicAttack);
             }
 
-            for (const auto &newCrystal : crystalBurst)
+            for (const auto& newCrystal : crystalBurst)
             {
                 if (newCrystal.spawnDelay <= 0.0f)
                 {
@@ -2924,19 +2925,19 @@ int main()
                 }
             }
 
-            for (const auto &proj : activeProjectiles)
+            for (const auto& proj : activeProjectiles)
             {
-                if(proj.spawnDelay>0.0f) // so projectiles do not draw whil they are not yer spaw
-                    continue ;
-                for (const auto &hazard : proj.trail)
+                if (proj.spawnDelay > 0.0f) // so projectiles do not draw whil they are not yer spaw
+                    continue;
+                for (const auto& hazard : proj.trail)
                 {
                     hazardDot.setPosition(hazard.position);
                     window.draw(hazardDot);
                 }
 
-                Sprite &activeProjSprite = (currentphase == 3) ? meteorProj : projSprite;
+                Sprite& activeProjSprite = (currentphase == 3) ? meteorProj : projSprite;
                 if (currentphase == 3)
-                    meteorProj.setScale({0.12f , 0.15f}); // Large Phase 3 projectile
+                    meteorProj.setScale({ 0.12f , 0.15f }); // Large Phase 3 projectile
 
                 if (proj.parried)
                 {
@@ -2960,7 +2961,7 @@ int main()
 
                 if (currentphase == 3)
                 {
-                    Vector2f direction = proj.isLaunched? proj.velocity: (Playersprite.getPosition() - proj.position);
+                    Vector2f direction = proj.isLaunched ? proj.velocity : (Playersprite.getPosition() - proj.position);
                     if (direction.x != 0.f || direction.y != 0.f)
                         activeProjSprite.setRotation(direction.angle() - degrees(90.f));
 
@@ -2969,7 +2970,7 @@ int main()
                 window.draw(activeProjSprite);
             }
             // draw each of the player's shots (now uses the flame attack sprite, merged from the 1st code)
-            for (const auto &shot : playershooting)
+            for (const auto& shot : playershooting)
             {
                 Sprite s = playerShot;
                 s.setPosition(shot.position);
@@ -2979,13 +2980,13 @@ int main()
             // Draw Player on top
             window.draw(Playersprite);
 
-            if(changeState ==10 ) {
+            if (changeState == 10) {
                 //changing the scores live on screeen
 
                 endlessScoreText.setString("SCORE: " + to_string(currentScore));
                 endlessBestText.setString("HIGH SCORE: " + to_string(highScore));
-                window.draw(endlessBestText) ;
-                window.draw(endlessScoreText) ;
+                window.draw(endlessBestText);
+                window.draw(endlessScoreText);
 
             }
 
@@ -3016,7 +3017,7 @@ int main()
 
                 rendering(window, starBackground, currentState, titletext,
                     mainMenuItems, deathMenuItems, victoryMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-                    DimScreen, Playersprite, currentHeart, debug, endless, currentScore , highScore);
+                    DimScreen, Playersprite, currentHeart, debug, endless, currentScore, highScore);
             }
             if (changeState == 3)
             {
@@ -3030,9 +3031,9 @@ int main()
 
                 waveTriggerClock.restart(); // resets attack timings
                 shakeTimer = 0.0f;          // resets shakeTimer
-                healthBar.setSize({300.f, 20.f});
+                healthBar.setSize({ 300.f, 20.f });
                 healthBar.setFillColor(Color(57, 255, 20));
-                bossHealth.setSize({500.f, 20.f});
+                bossHealth.setSize({ 500.f, 20.f });
                 passiveHeal = false; // boss must not start the retry in its healing final form
                 magicTimer.restart();
                 burstTimer.restart();
@@ -3055,13 +3056,13 @@ int main()
                 // reseting sprites scale etc
                 Bosssprite.setTexture(texture3, true);
                 FloatRect bounds = Bosssprite.getLocalBounds();
-                Bosssprite.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-                Bosssprite.setScale({0.1f, 0.1f});
-                Bosssprite.setPosition({width / 2.0f, 240.0f});
+                Bosssprite.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
+                Bosssprite.setScale({ 0.1f, 0.1f });
+                Bosssprite.setPosition({ width / 2.0f, 240.0f });
             }
             if (changeState == 4)
             {
-                const DialogueLine &line = dialogueLines[dialogueIndex];
+                const DialogueLine& line = dialogueLines[dialogueIndex];
                 drawDialogue(window, font, line.text, line.color, Bosssprite.getPosition() + Vector2f(Bosssprite.getGlobalBounds().size.x / 2.0f + 12.f, -45.f));
             }
 
