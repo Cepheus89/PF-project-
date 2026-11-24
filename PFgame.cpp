@@ -2332,7 +2332,7 @@ int main()
                 }
 
                 // the speed of the map scroll cuz, yeah
-                float mapscrollspeed = 30.0f - 5 * (difficultyIndex - 1);
+                float mapscrollspeed = 30.0f + 5 * (difficultyIndex - 1);
                 if (currentphase == 2) // must ONLY happen in the 2nd wave
                 {
                     // keeps player on path if the scrolling top wall pushes into them, also fixed a bug where if map push you out of path, it was not allowing you to move, keeping you stuck (Haras)
