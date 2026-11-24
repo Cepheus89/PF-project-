@@ -61,6 +61,7 @@ map_track3.png
 menu_bgm.wav 
 phase1_bgm.wav 
 phase2_bgm.wav 
+newMeteor.png
 phase3_bgm.wav 
 snd_damage.mp3 
 voice1.wav laugh.wav 
