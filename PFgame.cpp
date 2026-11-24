@@ -5,6 +5,7 @@
 #include <ctime>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <fstream>
 
 using namespace std;
 using namespace sf;
@@ -21,7 +22,8 @@ enum class GameState
     Death,
     Victory, //(Haras)
     Shop,
-    Debug // (Haras)
+    Debug, // (Haras)
+    Endless
 };
 
 // A DEBUG STATE YAYYYYYYYYYYYY (Haras)
@@ -146,7 +148,7 @@ void healthBarUpdate(RectangleShape &healthBar, float damage)
 // Event polling and hover interaction logic
 // Chnage state = 0 is menu change state 1 is pause change state 2 is playing
 void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
-                      int &hoveredIndex, vector<Text> &mainMenuItems, vector<Text> &deathMenuOptions, 
+                      int &hoveredIndex, vector<Text> &mainMenuItems, vector<Text> &deathMenuOptions,
                       vector<Text> &victoryMenuOptions, vector<Text> &startMenuItems, vector<Text> &pauseMenuItems, vector<string> &startOptions,
                       int &difficultyIndex, const vector<string> &difficulties, const Font &font, int &changeState, GameState &previousState,
                       float &speed, float &projectileSpeed, float &waveInterval, float &launchInterval,
@@ -225,9 +227,12 @@ void menu_Interaction(RenderWindow &window, View &view, GameState &currentState,
                         waveInterval = 0.8f - 0.2f * (difficultyIndex - 1);
                     }
                     // work in prpgress
-                    else if (hoveredIndex == 1)
-                        // Change this to endless please
-                        currentState = GameState::Tutorial; // Tutorial page add textures
+                    else if (hoveredIndex == 1){
+                        previousState = GameState::Playing;
+                        currentState = GameState::Playing; // Tutorial page add textures
+                        changeState=10 ;
+
+                    }
                     else if (hoveredIndex == 2)
                     {
                         previousState = GameState::Playing;
@@ -573,7 +578,8 @@ void keys(RenderWindow &window, const Font &font, const string &newKey, Vector2f
 void rendering(RenderWindow &window, const VertexArray &starfield, GameState currentState,
                const Text &titleText, const vector<Text> &mainMenuItems, vector<Text> &deathMenuItems,
                vector<Text>& victoryMenuItems, const vector<Text> &startMenuItems, const vector<Text> &pauseMenuItems, const Font &font, const string &currentDifficulty, float soundVolume, float musicVolume, float shakeIntensity,
-               RectangleShape &dimBackground, const Sprite &playerSprite, int currentHeart, const DebugState &debug)
+               RectangleShape &dimBackground, const Sprite &playerSprite, int currentHeart, const DebugState &debug ,
+               bool endless, int currentScore, int highScore)
 {
     // rendering will now render live percentage of SF, BGM, SI by updating static 100% string to dynamically display variable (Haras),
     //  it has been edited for game end screen overhaul (Haras)
@@ -782,9 +788,23 @@ void rendering(RenderWindow &window, const VertexArray &starfield, GameState cur
         overword.setStyle(Text::Bold);
         overword.setScale({ 1.2f, 1.0f });
         window.draw(overword);
-        // encourage trying again (Haras)
-        Text tryagain = createCenteredText(font, "Try Again?...", 22, { 400.f, 305.f }, Color::White);
-        window.draw(tryagain);
+
+        //display on end screen
+        if (endless)
+        {
+            //different for endless mode show the score now and the high score;
+            Text finalScore =createCenteredText(font, "SCORE: " + to_string(currentScore), 24, { 400.f, 275.f }, Color::White);
+            Text finalBest = createCenteredText(font, "HIGH SCORE: " + to_string(highScore), 24, { 400.f, 310.f }, Color::Yellow);
+            window.draw(finalScore);
+            window.draw(finalBest);
+        }
+        else
+        {
+            // encourage trying again (Haras)
+            Text tryagain = createCenteredText(font, "Try Again?...", 22, { 400.f, 305.f }, Color::White);
+            window.draw(tryagain);
+        }
+
         // making the buttons aesthetically pretty (Haras)
         float buttoncentersX[2] = { 185.f, 615.f };
         float lineyoffsets[2] = { 440.f, 490.f };
@@ -1065,12 +1085,16 @@ void horizontal(vector<Projectile> &activeProjectiles, const RectangleShape &bat
     Projectile pLeft;
     pLeft.position = {left, height + 20.0f};
     pLeft.velocity = {projectileSpeed, 0.0f};
+    pLeft.isLaunched = false;
+    pLeft.tracksPlayer = false;
     pLeft.leavesTrail = true;
     pLeft.launchTimer = 0.8f;
-
+    // added the laucnehd and tracks stuff
     Projectile pRight;
     pRight.position = {right, height};
     pRight.velocity = {-projectileSpeed, 0.0f};
+    pRight.isLaunched = false;
+    pRight.tracksPlayer = false;
     pRight.leavesTrail = true;
     pRight.launchTimer = 0.8f;
 
@@ -1678,6 +1702,16 @@ int main()
     cover.setPosition(playerIcon.getPosition());
     cover.setFillColor(Color(120, 120, 30, 230));
 
+    //taskbar icon
+
+    Image gameIcon ;
+    //if load then we apply it in the icon
+
+    if (gameIcon.loadFromFile("Assets/boss_sprite_phase3.jpg")){
+        window.setIcon(gameIcon.getSize(),gameIcon.getPixelsPtr());
+    }
+
+
     // standard speed
     float speed = 7.0f;
 
@@ -1715,6 +1749,17 @@ int main()
     FloatRect projBounds = projSprite.getLocalBounds();
     projSprite.setScale({0.8f, 0.8f});
     projSprite.setOrigin({projBounds.size.x / 2.f, projBounds.size.y / 2.f});
+
+    //texture for new sprite phase 3
+    Texture meteor ;
+    if (!meteor.loadFromFile("Assets/newMeteor.png")){
+        return -1 ;
+    }
+    Sprite meteorProj (meteor) ;
+    Vector2u meteorSize = meteor.getSize() ;
+    meteorProj.setOrigin({meteorSize.x/2.f , meteorSize.y*0.72}) ; // also taking note of the falme trail
+    meteorProj.setScale({1.f, 1.f}) ;
+
 
     // The Map texture yayyy 2nd phase woohoo
     vector<string> mapFiles = {
@@ -2071,7 +2116,35 @@ int main()
         phase3Clock.restart();
         changeState = 2;
     };
+    float endLesstime = 0.0f;
+    bool endless = false;
+    int currentScore = 0;
+    int highScore = 0;
 
+    //load the file if does not exist then create one and intiilaize
+    ifstream scoreIn("Assets/endless_highscore.txt");
+    if (scoreIn.is_open())
+    {
+        scoreIn >> highScore;
+        scoreIn.close();
+    }
+    else
+    {
+        ofstream createFile("Assets/endless_highscore.txt");
+        if (createFile.is_open())
+        {
+            createFile << 0;
+            createFile.close();
+        }
+    }
+
+    Text endlessScoreText(font, "SCORE: 0", 22);
+    endlessScoreText.setFillColor(Color::White);
+    endlessScoreText.setPosition({25.f, 20.f});
+
+    Text endlessBestText(font, "HIGH SCORE: " + to_string(highScore), 22);
+    endlessBestText.setFillColor(Color::Yellow);
+    endlessBestText.setPosition({25.f, 50.f});
     while (window.isOpen())
     {
         float dt = frameClock.restart().asSeconds();
@@ -2106,7 +2179,22 @@ int main()
                 {
                     Playersprite.setPosition(battleBox.getPosition()); // This will put player position back on center
                     activeProjectiles.clear();                         // Clears all previous projectiles
-                    wavecount = 0;                                     // restart waves
+                    wavecount = 0;  //restart waves ;
+
+
+                    //keep  the final score visible while on the death screen;
+                    //only reset on when chagin to menu or restart etc
+                    if (currentState != GameState::Death)
+                    {
+                        endLesstime = 0.0f;
+                        currentScore = 0;
+                    }
+                    if (changeState == 0)
+                    {
+                        endless = false;
+                        endLesstime = 0.0f;
+                        currentScore = 0;
+                    }
 
                     currentphase = 1; // back to phase 1 cuz yes
                     mapindex = 0;
@@ -2146,11 +2234,28 @@ int main()
             // integrated soundvolume and musicVolume variable
             rendering(window, starBackground, currentState, titletext, mainMenuItems, deathMenuItems,
                 victoryMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume,
-                musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug);
+                musicVolume, shakeIntesity, DimScreen, Playersprite, currentHeart, debug , endless , currentScore , highScore);
             window.display();
         }
         else
         {
+            if (changeState == 10 ){
+                endless = true ;
+                playMusicTrack("Assets/phase1_bgm.wav"); // also playing the audio for endless
+            }
+            //so preserve and death doesnt take back to story mode
+            else if (changeState ==2 && endless){
+                //also setting current score back to 0
+
+                if (previousState != GameState::Paused)
+                {
+                    endLesstime = 0.0f;
+                    currentScore = 0;
+                    endlessScoreText.setString("SCORE: 0");
+                }
+                changeState = 10;
+                playMusicTrack("Assets/phase1_bgm.wav");
+            }
             if (changeState == 2 && debug.jumpPhase != 0)
             { // for debug menu (Haras)
                 healthBar.setSize({300.f, 20.f});
@@ -2181,7 +2286,7 @@ int main()
                 introDone = true;
                 startDialogue(1);
             }
-            if (changeState == 2)
+            if (changeState == 2||  changeState == 10)
             {
                 while (const optional<Event> event = window.pollEvent())
                 {
@@ -2315,8 +2420,32 @@ int main()
                 // first phase stuff ugh(Bazil comments here)
                 if (currentphase == 1)
                 {
+                    //reset it
+                    if (endLesstime == 0.0f) {
+                        waveTriggerClock.restart();
+                        magicTimer.restart();
+                        burstTimer.restart();
+                    }
+                   //calculation ;
+                    if (changeState==10){
+                        endLesstime +=dt ;
+                        //formula reward player for more score if the difficulty more
+                        currentScore = static_cast<int>(endLesstime * 100 * (difficultyIndex + 1));
+
+                        if (currentScore > highScore)
+                        {
+                            highScore = currentScore;
+                            ofstream scoreOut("Assets/endless_highscore.txt");
+                            if (scoreOut.is_open())
+                            {
+                                scoreOut << highScore;
+                                scoreOut.close();
+                            }
+                        }
+                    }
+
                     bool nextwave = false;
-                    if (wavecount <= 3)
+                    if (wavecount <= 3 )
                     { // this is only for the first crescent waves
                         nextwave = allLaunched(activeProjectiles);
                     }
@@ -2387,6 +2516,10 @@ int main()
                         }
 
                         wavecount = (wavecount + 1) % 12;
+                        //random nature after first 12 waves
+                        if ( changeState == 10 && endLesstime >=35.f ) {
+                            wavecount = rand() %12 ;
+                        }
                     }
 
                     if (magicTimer.getElapsedTime().asSeconds() >= 3.0f - (difficultyIndex))
@@ -2407,42 +2540,44 @@ int main()
                     }
 
                     // Change Phase 1 boss sprite based on remaining HP (max bar width = 500.f)
-                    float hp = bossHealth.getSize().x;
+                    if (changeState!=10) {
+                        float hp = bossHealth.getSize().x;
 
-                    // once the boss drops to the final third it enters its final form and keeps it (passiveHeal),
-                    // fixed: removed the stray "&& hp" from the old condition
-                    if (hp <= 150.0f || passiveHeal)
-                    {
-                        Bosssprite.setTexture(bossFinalStage, true);
-                        FloatRect b = Bosssprite.getLocalBounds();
-                        Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-                        Bosssprite.setScale({0.14f, 0.14f}); // Adjust scale for bossFinalStage.png
-                        Bosssprite.setPosition({width / 2.0f, 230.0f});
-                        passiveHeal = true;
+                        // once the boss drops to the final third it enters its final form and keeps it (passiveHeal),
+                        // fixed: removed the stray "&& hp" from the old condition
+                        if (hp <= 150.0f || passiveHeal)
+                        {
+                            Bosssprite.setTexture(bossFinalStage, true);
+                            FloatRect b = Bosssprite.getLocalBounds();
+                            Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
+                            Bosssprite.setScale({0.14f, 0.14f}); // Adjust scale for bossFinalStage.png
+                            Bosssprite.setPosition({width / 2.0f, 230.0f});
+                            passiveHeal = true;
 
-                        // passive heal: slowly regenerates up to 400, never while the boss is at/below 0 so it can't undo a killing blow
-                        if (hp > 0.0f && hp <= 400.f)
-                            bossHealth.setSize({min(400.f, hp + 5.f * dt), 20.f});
-                    }
-                    else if (hp <= 300.0f) // below 60-30 stage 2 ;
-                    {
-                        Bosssprite.setTexture(bossStage2, true);
-                        FloatRect b = Bosssprite.getLocalBounds();
-                        Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-                        Bosssprite.setScale({0.12f, 0.12f}); // Adjust scale for bossStage2.png
-                        Bosssprite.setPosition({width / 2.0f, 235.0f});
-                    }
-                    else // default when hp above 60%
-                    {
-                        Bosssprite.setTexture(texture3, true);
-                        FloatRect b = Bosssprite.getLocalBounds();
-                        Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-                        Bosssprite.setScale({0.1f, 0.1f});
-                        Bosssprite.setPosition({width / 2.0f, 240.0f});
+                            // passive heal: slowly regenerates up to 400, never while the boss is at/below 0 so it can't undo a killing blow
+                            if (hp > 0.0f && hp <= 400.f)
+                                bossHealth.setSize({min(400.f, hp + 5.f * dt), 20.f});
+                        }
+                        else if (hp <= 300.0f) // below 60-30 stage 2 ;
+                        {
+                            Bosssprite.setTexture(bossStage2, true);
+                            FloatRect b = Bosssprite.getLocalBounds();
+                            Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
+                            Bosssprite.setScale({0.12f, 0.12f}); // Adjust scale for bossStage2.png
+                            Bosssprite.setPosition({width / 2.0f, 235.0f});
+                        }
+                        else // default when hp above 60%
+                        {
+                            Bosssprite.setTexture(texture3, true);
+                            FloatRect b = Bosssprite.getLocalBounds();
+                            Bosssprite.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
+                            Bosssprite.setScale({0.1f, 0.1f});
+                            Bosssprite.setPosition({width / 2.0f, 240.0f});
+                        }
                     }
                 }
 
-                if (currentphase == 1 && Keyboard::isKeyPressed(Keyboard::Key::Space) && shootyclock.getElapsedTime().asSeconds() >= 0.25f) // shooting them projectiles rahhh. The 0.25 is to put the delay between each projectile so we don't become a minigun (teammates would never approve of the minigun tis so sad :[ )
+                if (currentphase == 1 && changeState!=10 && Keyboard::isKeyPressed(Keyboard::Key::Space) && shootyclock.getElapsedTime().asSeconds() >= 0.25f) // shooting them projectiles rahhh. The 0.25 is to put the delay between each projectile so we don't become a minigun (teammates would never approve of the minigun tis so sad :[ )
                 {
                     shootyclock.restart();
                     Projectile s;
@@ -2513,7 +2648,7 @@ int main()
                             {
                                 shootSound.setVolume(soundVolume);
                                 shootSound.play();
-                                healthBarUpdate(healthBar, 15.f);
+                                healthBarUpdate(healthBar, 20.f + 20*(difficultyIndex));
                                 shakeTimer = 0.3f;
                                 activeProjectiles.erase(activeProjectiles.begin() + i);
                             }
@@ -2574,6 +2709,7 @@ int main()
                 {
                     if (currentphase == 1)
                         invulnerabilitytimerMagicAttack = 1.f;
+
                     shootSound.setVolume(soundVolume); // Sets volume of current selected menu volume (Haras)
                     shootSound.play();                 // Makes sound effect play when player gets hit (Haras)
                     healthBarUpdate(healthBar, 30 - 5 * (difficultyIndex - 1));
@@ -2757,7 +2893,7 @@ int main()
                     window.draw(battleBox);
                 }
                 window.draw(Bosssprite);
-                if (!isPostMapCutscene)
+                if (!isPostMapCutscene&& changeState!=10)
                 {
                     window.draw(healthBoundary);
                     window.draw(bossHealth);
@@ -2795,15 +2931,17 @@ int main()
 
             for (const auto &proj : activeProjectiles)
             {
+                if(proj.spawnDelay>0.0f) // so projectiles do not draw whil they are not yer spaw
+                    continue ;
                 for (const auto &hazard : proj.trail)
                 {
                     hazardDot.setPosition(hazard.position);
                     window.draw(hazardDot);
                 }
 
-                Sprite &activeProjSprite = (currentphase == 3) ? MagicAttack : projSprite;
+                Sprite &activeProjSprite = (currentphase == 3) ? meteorProj : projSprite;
                 if (currentphase == 3)
-                    MagicAttack.setScale({3.2f, 3.2f}); // Large Phase 3 projectile
+                    meteorProj.setScale({0.12f , 0.15f}); // Large Phase 3 projectile
 
                 if (proj.parried)
                 {
@@ -2820,15 +2958,20 @@ int main()
 
                 if (proj.spawnDelay <= 0.0f && (proj.isLaunched || proj.launchTimer > 0.0f))
                 {
-                    activeProjSprite.setPosition(proj.position);
-                    window.draw(activeProjSprite);
+
+                    activeProjSprite.setRotation(degrees(proj.rotation));
+
                 }
 
                 if (currentphase == 3)
                 {
-                    MagicAttack.setScale({5.f, 5.f});   // Restore pillar scale
-                    MagicAttack.setColor(Color::White); // Restore default color
+                    Vector2f direction = proj.isLaunched? proj.velocity: (Playersprite.getPosition() - proj.position);
+                    if (direction.x != 0.f || direction.y != 0.f)
+                        activeProjSprite.setRotation(direction.angle() - degrees(90.f));
+
                 }
+                activeProjSprite.setPosition(proj.position);
+                window.draw(activeProjSprite);
             }
             // draw each of the player's shots (now uses the flame attack sprite, merged from the 1st code)
             for (const auto &shot : playershooting)
@@ -2840,6 +2983,17 @@ int main()
 
             // Draw Player on top
             window.draw(Playersprite);
+
+            if(changeState ==10 ) {
+                //changing the scores live on screeen
+
+                endlessScoreText.setString("SCORE: " + to_string(currentScore));
+                endlessBestText.setString("HIGH SCORE: " + to_string(highScore));
+                window.draw(endlessBestText) ;
+                window.draw(endlessScoreText) ;
+
+            }
+
             // phase 3 draw blaze rod (phase 3)
             if (currentphase == 3)
             {
@@ -2867,7 +3021,7 @@ int main()
 
                 rendering(window, starBackground, currentState, titletext,
                     mainMenuItems, deathMenuItems, victoryMenuItems, startMenuItems, pauseMenuItems, font, difficulties[difficultyIndex], soundVolume, musicVolume, shakeIntesity,
-                    DimScreen, Playersprite, currentHeart, debug);
+                    DimScreen, Playersprite, currentHeart, debug, endless, currentScore , highScore);
             }
             if (changeState == 3)
             {
@@ -2893,6 +3047,7 @@ int main()
                 crystalBurst.clear();
                 isParrying = false;
                 cooldown = 0.f;
+                wavecount = 0; // restart waves
 
                 burstDelay = 10.f;
 
